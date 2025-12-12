@@ -140,8 +140,9 @@ if __name__ == "__main__":
                 #everything is being resampled to wind data resolution
                 #we need to extract information from it though
                 #we also need to calculate wind speed from east and west components
-                    #### load data
-                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_{3}_{1}_{4}_MAXSS_L4.nc".format(region,year,storm,region_id,storm_id)));
+                
+                #### load data
+                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
                 wind_eastward = winds_nc.variables['__eo_eastward_wind'][:]
                 wind_northward = winds_nc.variables['__eo_northward_wind'][:]
                 
