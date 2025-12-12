@@ -104,7 +104,7 @@ if __name__ == "__main__":
             MAXSS_storms=storm_list
             
             storm_counter=0
-        #### Loop through the storms for each year in the MAXSS storm dataset 
+            #### Loop through the storms for each year in the MAXSS storm dataset 
             for storm in MAXSS_storms:
 
                 #directory for storm being processes
@@ -149,7 +149,7 @@ if __name__ == "__main__":
                 wind_eastward = wind_eastward.astype('float64')
                 wind_northward = wind_northward.astype('float64')
                 
-                    #### get wind data dimensions
+                #### get wind data dimensions
                 wind_time_dimension=len(wind_eastward)
                 wind_lat_dimension=len(wind_eastward[0])
                 wind_lon_dimension=len(wind_eastward[0][0])
@@ -159,13 +159,13 @@ if __name__ == "__main__":
                 wind_time = winds_nc.variables['time'][:]
                 wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
                  
-                    #### min and max of wind grid lats and lons   
+                #### min and max of wind grid lats and lons   
                 min_lat=wind_lat[0]
                 max_lat=wind_lat[0-1]                    
                 min_lon=wind_lon[0]
                 max_lon=wind_lon[0-1] 
                     
-                    #### calculate wind speed from east and west components
+                #### calculate wind speed from east and west components
                 wind_speed = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=np.float32);
                 wind_speed=pow((pow(wind_eastward,2)+pow(wind_northward,2)),0.5)
                 
@@ -173,15 +173,15 @@ if __name__ == "__main__":
                 Wind_moment3=pow(wind_speed,3)
                 Wind_moment3point7=pow(wind_speed,3.742)
 
-                    #### stop wind fields clogging up memory
+                #### stop wind fields clogging up memory
                 del wind_eastward, wind_northward ,winds_nc
                 
-                    #### save wind speed to netCDF
+                #### save wind speed to netCDF
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                 
-                    #### provide dimensions
+                #### provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -248,13 +248,13 @@ if __name__ == "__main__":
                     thirdseven_moment_prestormref[wind_step,:,:]=wind_prestormref_thirdseven_moment[:,:]
 
 
-                    #### save wind pre storm output into a netCDF 
+                #### save wind pre storm output into a netCDF 
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
-                    #### create dataset and provide dimensions
+                #### create dataset and provide dimensions
                 
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
@@ -306,165 +306,165 @@ if __name__ == "__main__":
 
 
                 
-                # #### MAXSS ESACCI SST data
-                #     #### load data
-                # sst_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_{3}_{1}_{4}_OSTIA-ESACCI-L4-GLOB-v2.1.nc".format(region,year,storm,region_id,storm_id)));
-                # #sst = sst_nc.variables['__eo_analysed_sst'][:]
-                # sst_lat = sst_nc.variables['lat'][:]
-                # sst_lon = sst_nc.variables['lon'][:]
-                # sst_time = sst_nc.variables['time'][:]
+                #### MAXSS ESACCI SST data
+                #### load data
+                sst_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_OSTIA-C3S-L4-GLOB-v2.1.nc".format(region,year,storm,region_id,storm_id)));
+                #sst = sst_nc.variables['__eo_analysed_sst'][:]
+                sst_lat = sst_nc.variables['lat'][:]
+                sst_lon = sst_nc.variables['lon'][:]
+                sst_time = sst_nc.variables['time'][:]
                 
-                #     #### resample SST to wind grid
-                # iCoordMeshes = None; #Initially this is None but will be calculated exactly once. It's a long calculation so doesn't want to be repeated.
-                # outputRes = 0.25;
-                #     #### Calculate binning information
-                #     #Only do this once because it's computationally expensive but the same for all time steps
-                # if iCoordMeshes is None: 
-                #     CCILats = sst_nc.variables['lat'][:]
-                #     CCILons = sst_nc.variables['lon'][:]
-                #     #print("Calculating grid cell mapping...");
-                #     iCoordMeshes = np.full((wind_lat_dimension,wind_lon_dimension), None, dtype=object);
+                #### resample SST to wind grid
+                iCoordMeshes = None; #Initially this is None but will be calculated exactly once. It's a long calculation so doesn't want to be repeated.
+                outputRes = 0.25;
+                #### Calculate binning information
+                #Only do this once because it's computationally expensive but the same for all time steps
+                if iCoordMeshes is None: 
+                    CCILats = sst_nc.variables['lat'][:]
+                    CCILons = sst_nc.variables['lon'][:]
+                    #print("Calculating grid cell mapping...");
+                    iCoordMeshes = np.full((wind_lat_dimension,wind_lon_dimension), None, dtype=object);
                     
                 
-                #     for ilat, lat in enumerate(np.arange(min_lat,max_lat , outputRes)):
-                #         #print("Grid cell mapping for latitude", lat);
-                #         for ilon, lon in enumerate(np.arange(min_lon,max_lon, outputRes)):
-                #             wlat = np.where((CCILats >= lat) & (CCILats < (lat+outputRes)));
-                #             wlon = np.where((CCILons >= lon) & (CCILons< (lon+outputRes)));
+                    for ilat, lat in enumerate(np.arange(min_lat,max_lat , outputRes)):
+                        #print("Grid cell mapping for latitude", lat);
+                        for ilon, lon in enumerate(np.arange(min_lon,max_lon, outputRes)):
+                            wlat = np.where((CCILats >= lat) & (CCILats < (lat+outputRes)));
+                            wlon = np.where((CCILons >= lon) & (CCILons< (lon+outputRes)));
                             
-                #             if (len(wlat[0]) > 0) & (len(wlon[0]) > 0):
-                #                 iCoordMeshes[ilat, ilon] = np.meshgrid(wlat[0], wlon[0]);
+                            if (len(wlat[0]) > 0) & (len(wlon[0]) > 0):
+                                iCoordMeshes[ilat, ilon] = np.meshgrid(wlat[0], wlon[0]);
                                     
-                #     # loop through timesteps 
-                # timesteps_sst=len(sst_time)
-                # del ilat, ilon, CCILats,CCILons, lat , lon
+                # loop through timesteps 
+                timesteps_sst=len(sst_time)
+                del ilat, ilon, CCILats,CCILons, lat , lon
                 
-                #     #### Store data for each day of the month
-                # sst_regrid_Vals = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                # sst_regrid_ValsErr = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                # sst_regrid_ValsCounts = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
+                #### Store data for each day of the month
+                sst_regrid_Vals = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
+                sst_regrid_ValsErr = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
+                sst_regrid_ValsCounts = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
                                
-                # for sst_timesteps in range(0, timesteps_sst): 
-                #     #print(sst_timesteps)                               
-                #     sst_time_slice=sst_nc.variables['__eo_analysed_sst'][sst_timesteps,:,:]                         
-                #     sst_uncertainty_slice=sst_nc.variables['__eo_analysed_sst_uncertainty'][sst_timesteps,:,:]                         
-                #     newVals, newCountCount, newValsErr = process_slice(sst_time_slice, sst_uncertainty_slice);
+                for sst_timesteps in range(0, timesteps_sst): 
+                    #print(sst_timesteps)                               
+                    sst_time_slice=sst_nc.variables['__eo_analysed_sst'][sst_timesteps,:,:]                         
+                    sst_uncertainty_slice=sst_nc.variables['__eo_analysed_sst_uncertainty'][sst_timesteps,:,:]                         
+                    newVals, newCountCount, newValsErr = process_slice(sst_time_slice, sst_uncertainty_slice);
                 
-                #     sst_regrid_Vals[sst_timesteps,:,:] = newVals;
-                #     sst_regrid_ValsErr[sst_timesteps,:,:] = newValsErr;
-                #     sst_regrid_ValsCounts[sst_timesteps,:,:] = newCountCount;
+                    sst_regrid_Vals[sst_timesteps,:,:] = newVals;
+                    sst_regrid_ValsErr[sst_timesteps,:,:] = newValsErr;
+                    sst_regrid_ValsCounts[sst_timesteps,:,:] = newCountCount;
                 
-                # #plt.pcolor(sst_regrid_Vals[1,:,:])
+                #plt.pcolor(sst_regrid_Vals[1,:,:])
                              
-                # sst_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                sst_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 
-                #     #### get the data of each timestep in wind data
-                # sst_time = sst_nc.variables['time'][:]
-                # sst_dates = num2date(sst_time, sst_nc.variables['time'].units)
+                    #### get the data of each timestep in wind data
+                sst_time = sst_nc.variables['time'][:]
+                sst_dates = num2date(sst_time, sst_nc.variables['time'].units)
                 
-                #     #### loop through the wind timestamps, extract the month and use that to pick which SST data to use.
-                # for wind_step in range(0, wind_time_dimension):
+                    #### loop through the wind timestamps, extract the month and use that to pick which SST data to use.
+                for wind_step in range(0, wind_time_dimension):
                 
-                #     #now find the index of the CLOSEST value and use that
-                #     abs_deltas_from_target_date = np.absolute(sst_dates - wind_dates[wind_step])
-                #     index_of_min_delta_from_target_date = np.argmin(abs_deltas_from_target_date)
-                #     #closest_date = sst_dates[index_of_min_delta_from_target_date]
+                    #now find the index of the CLOSEST value and use that
+                    abs_deltas_from_target_date = np.absolute(sst_dates - wind_dates[wind_step])
+                    index_of_min_delta_from_target_date = np.argmin(abs_deltas_from_target_date)
+                    #closest_date = sst_dates[index_of_min_delta_from_target_date]
 
-                #     sst_on_wind_grid[wind_step,:,:]=sst_regrid_Vals[index_of_min_delta_from_target_date,:,:]
+                    sst_on_wind_grid[wind_step,:,:]=sst_regrid_Vals[index_of_min_delta_from_target_date,:,:]
                     
-                #     #### save SST output into a netCDF 
+                #### save SST output into a netCDF 
                 
-                # processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc".format(region,year,storm)));
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc".format(region,year,storm)));
 
-                # ncout = Dataset(processedFilePath, 'w');
+                ncout = Dataset(processedFilePath, 'w');
                     
-                #     #### create dataset and provide dimensions
+                #### create dataset and provide dimensions
                 
-                # ncout.createDimension("lat", wind_lat_dimension);
-                # ncout.createDimension("lon", wind_lon_dimension);
-                # ncout.createDimension("time", wind_time_dimension);
+                ncout.createDimension("lat", wind_lat_dimension);
+                ncout.createDimension("lon", wind_lon_dimension);
+                ncout.createDimension("time", wind_time_dimension);
                 
-                # #dimension variables
-                # var = ncout.createVariable("lat", float, ("lat",));
-                # var.units = "lat (degrees North)";
-                # var[:] = wind_lat;
+                #dimension variables
+                var = ncout.createVariable("lat", float, ("lat",));
+                var.units = "lat (degrees North)";
+                var[:] = wind_lat;
                 
-                # var = ncout.createVariable("lon", float, ("lon",));
-                # var.units = "lon (degrees East)";
-                # var[:] = wind_lon;
+                var = ncout.createVariable("lon", float, ("lon",));
+                var.units = "lon (degrees East)";
+                var[:] = wind_lon;
                 
-                # var = ncout.createVariable("time", int, ("time",));
-                # var.long_name = "Time";
-                # var.units = "seconds since 1981-01-01";
-                # var[:] = wind_time
+                var = ncout.createVariable("time", int, ("time",));
+                var.long_name = "Time";
+                var.units = "seconds since 1981-01-01";
+                var[:] = wind_time
                 
-                # #data variables
-                # var = ncout.createVariable("sst", float, ("time","lat", "lon"));
-                # var.units = "Degrees Kelvin";
-                # var.long_name = "Daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolutionn";
-                # var[:] = sst_on_wind_grid;
+                #data variables
+                var = ncout.createVariable("sst", float, ("time","lat", "lon"));
+                var.units = "Degrees Kelvin";
+                var.long_name = "Daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolutionn";
+                var[:] = sst_on_wind_grid;
                 
-                # ncout.close();   
+                ncout.close();   
                 
                 
-                # #### MAXSS ESACCI SST data pre_storm_reference
+                #### MAXSS ESACCI SST data pre_storm_reference
             
-                # #example slicing for numpy 3d matrixes
-                # # yy= np.random.randint(0, 100, size=(4, 5, 6))
-                # # yyy=np.nanmean(yy[0:3:1,:,:],axis =(0)) 
-                # #temp=sst_on_wind_grid[0:(15*24):1,:,:]
+                #example slicing for numpy 3d matrixes
+                # yy= np.random.randint(0, 100, size=(4, 5, 6))
+                # yyy=np.nanmean(yy[0:3:1,:,:],axis =(0)) 
+                #temp=sst_on_wind_grid[0:(15*24):1,:,:]
                 
-                # #pre storm is first 15 days,so 15 days * hourly resolution
-                # SST_prestormref=np.nanmean(sst_on_wind_grid[0:(15*24):1,:,:],axis =(0))
-                # #create empty grid
-                # sst_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                # #set all the values equal to the pre storm mean values
-                # for wind_step in range(0, wind_time_dimension):
-                #     sst_on_wind_grid_prestormref[wind_step,:,:]=SST_prestormref[:,:]
+                #pre storm is first 15 days,so 15 days * hourly resolution
+                SST_prestormref=np.nanmean(sst_on_wind_grid[0:(15*24):1,:,:],axis =(0))
+                #create empty grid
+                sst_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                #set all the values equal to the pre storm mean values
+                for wind_step in range(0, wind_time_dimension):
+                    sst_on_wind_grid_prestormref[wind_step,:,:]=SST_prestormref[:,:]
                 
                 
                     
-                #     #### save SST pre storm output into a netCDF 
+                #### save SST pre storm output into a netCDF 
                 
-                # processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc".format(region,year,storm)));
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc".format(region,year,storm)));
 
-                # ncout = Dataset(processedFilePath, 'w');
+                ncout = Dataset(processedFilePath, 'w');
                     
-                #     #### create dataset and provide dimensions
+                #### create dataset and provide dimensions
                 
-                # ncout.createDimension("lat", wind_lat_dimension);
-                # ncout.createDimension("lon", wind_lon_dimension);
-                # ncout.createDimension("time", wind_time_dimension);
+                ncout.createDimension("lat", wind_lat_dimension);
+                ncout.createDimension("lon", wind_lon_dimension);
+                ncout.createDimension("time", wind_time_dimension);
                 
-                # #dimension variables
-                # var = ncout.createVariable("lat", float, ("lat",));
-                # var.units = "lat (degrees North)";
-                # var[:] = wind_lat;
+                #dimension variables
+                var = ncout.createVariable("lat", float, ("lat",));
+                var.units = "lat (degrees North)";
+                var[:] = wind_lat;
                 
-                # var = ncout.createVariable("lon", float, ("lon",));
-                # var.units = "lon (degrees East)";
-                # var[:] = wind_lon;
+                var = ncout.createVariable("lon", float, ("lon",));
+                var.units = "lon (degrees East)";
+                var[:] = wind_lon;
                 
-                # var = ncout.createVariable("time", int, ("time",));
-                # var.long_name = "Time";
-                # var.units = "seconds since 1981-01-01";
-                # var[:] = wind_time
+                var = ncout.createVariable("time", int, ("time",));
+                var.long_name = "Time";
+                var.units = "seconds since 1981-01-01";
+                var[:] = wind_time
                 
-                # #data variables
-                # var = ncout.createVariable("sst", float, ("time","lat", "lon"));
-                # var.units = "Degrees Kelvin";
-                # var.long_name = "Pre storm (15 days) mean of daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
-                # var[:] = sst_on_wind_grid_prestormref;
+                #data variables
+                var = ncout.createVariable("sst", float, ("time","lat", "lon"));
+                var.units = "Degrees Kelvin";
+                var.long_name = "Pre storm (15 days) mean of daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var[:] = sst_on_wind_grid_prestormref;
                 
-                # ncout.close();   
+                ncout.close();   
                 
 
-                #     #### delete all the variables used during import and saving of SST      
-                # del SST_prestormref,sst_on_wind_grid_prestormref,ncout, sst_dates, sst_lat,sst_lon,sst_nc,sst_on_wind_grid
-                # del newVals, sst_regrid_ValsErr,sst_regrid_ValsCounts,newCountCount,newValsErr
-                # del sst_time,sst_time_slice,sst_timesteps,sst_uncertainty_slice,
-                # del processedFilePath,timesteps_sst,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
-                # print("SST regridded for Storm = "+storm)
+                #### delete all the variables used during import and saving of SST      
+                del SST_prestormref,sst_on_wind_grid_prestormref,ncout, sst_dates, sst_lat,sst_lon,sst_nc,sst_on_wind_grid
+                del newVals, sst_regrid_ValsErr,sst_regrid_ValsCounts,newCountCount,newValsErr
+                del sst_time,sst_time_slice,sst_timesteps,sst_uncertainty_slice,
+                del processedFilePath,timesteps_sst,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
+                print("SST regridded for Storm = "+storm)
           
                     
 
