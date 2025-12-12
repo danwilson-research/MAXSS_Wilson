@@ -11,7 +11,7 @@ This script has been updated in 2026 by Daniel Wilson
 
     #### all functions and scripts imported here
 
-#pacakges
+#Install required packages
 import os
 from os import path, makedirs;
 from glob import glob
@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
 #### Get the path of the root directory where the data are stored. 
     #This will be user specific and can be changed depening on where data is stored
-    MAXSS_working_directory = "C:\\Users\\rps207\Documents\\Python\\2022-MAXSS"; 
+    MAXSS_working_directory = "E:/MAXSS_working_directory"; 
     
     
     #note to use the same file structure used by the project r.g. #maxss/storm-atlas/ibtracts/region/year/storm
