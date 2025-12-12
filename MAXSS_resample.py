@@ -36,16 +36,21 @@ import pandas as pd
 from scipy.interpolate import griddata
 
 def process_slice(valData, errData, outputRes=0.25):
+    
+    #Handle masked values explicitly to avoid masked element to nan error
+    valData = valData.filled(fill_value=np.nan)
+    errData = errData.filled(fill_value=np.nan)
+    
     newGrid = np.full((wind_lat_dimension, wind_lon_dimension), np.nan, dtype=float);
     newGridCount = np.zeros((wind_lat_dimension, wind_lon_dimension), dtype=float);
     newGridErr = np.full((wind_lat_dimension, wind_lon_dimension), np.nan, dtype=float);
     for ilat, lat in enumerate(np.arange(min_lat, max_lat, outputRes)):
         for ilon, lon in enumerate(np.arange(min_lon, max_lon, outputRes)):
             if iCoordMeshes[ilat, ilon] is not None:
-                newGrid[ilat, ilon] = np.mean(valData[iCoordMeshes[ilat, ilon]]);
-                #newGridCount[ilat, ilon] = np.sum(countData[iCoordMeshes[ilat, ilon]]);
+                newGrid[ilat, ilon] = np.nanmean(valData[iCoordMeshes[ilat, ilon]]);
+                #newGridCount[ilat, ilon] = np.nansum(countData[iCoordMeshes[ilat, ilon]]);
                 newGridCount[ilat, ilon] = len(iCoordMeshes[ilat, ilon][0]) * len(iCoordMeshes[ilat, ilon][0][0]);
-                newGridErr[ilat, ilon] = np.sqrt(np.sum(pow(errData[iCoordMeshes[ilat, ilon]],2)));
+                newGridErr[ilat, ilon] = np.sqrt(np.nansum(pow(errData[iCoordMeshes[ilat, ilon]],2)));
     
     newGridErr[newGridCount!=0] = newGridErr[newGridCount!=0] / newGridCount[newGridCount!=0];
     
