@@ -3,7 +3,10 @@
 
 Script for looping through the MAXSS storm-Atlas and resampling data for fluxengine runs
 
-@author: Richard Sims
+@Original author: Richard Sims
+
+This script has been updated in 2026 by Daniel Wilson
+
 """
 
     #### all functions and scripts imported here
