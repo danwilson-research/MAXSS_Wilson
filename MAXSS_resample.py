@@ -9,7 +9,7 @@ This script has been updated in 2026 by Daniel Wilson
 
 """
 
-    #### all functions and scripts imported here
+#### all functions and scripts imported here
 
 #Install required packages
 import os
@@ -786,11 +786,11 @@ if __name__ == "__main__":
                     precip_on_wind_grid_prestormref[wind_step,:,:]=precip_prestormref[:,:]
                 
 
-                    #### save precip output into a netCDF 
+                #### save precip output into a netCDF 
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
-                    #### create dataset and provide dimensions
+                #### create dataset and provide dimensions
                 
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
@@ -826,12 +826,11 @@ if __name__ == "__main__":
                 del  precip_regrid_Vals, newCountCount
                 print("precip regridded for Storm = "+storm)                
                 
-                ## SCRIPT CHECKED UP TO HERE ##
-                
+                                
                 #### MAXSS ERA5 pressure data
 
                     #### load data
-                pressure_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_{3}_{1}_{4}_ERA5_SLP.nc".format(region,year,storm,region_id,storm_id)));
+                pressure_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_SLP.nc".format(region,year,storm,region_id,storm_id)));
                 #pressure = pressure_nc.variables['__eo_sp'][:]#Sea level pressure
                 pressure_lat = pressure_nc.variables['lat'][:]
                 pressure_lon = pressure_nc.variables['lon'][:]
@@ -862,7 +861,7 @@ if __name__ == "__main__":
                 timesteps_pressure=len(pressure_time)
                 del ilat, ilon, CCILats,CCILons, lat , lon
                 
-                    #### Store data for each day of the month
+                #### Store data for each day of the month
                 pressure_regrid_Vals = np.empty((timesteps_pressure, wind_lat_dimension,wind_lon_dimension), dtype=float);
                 # pressure_regrid_ValsErr = np.empty((timesteps_pressure, wind_lat_dimension,wind_lon_dimension), dtype=float);
                 # pressure_regrid_ValsCounts = np.empty((timesteps_pressure, wind_lat_dimension,wind_lon_dimension), dtype=float);
@@ -883,11 +882,11 @@ if __name__ == "__main__":
                              
                 pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 
-                    #### get the data of each timestep in wind data
+                #### get the data of each timestep in wind data
                 pressure_time = pressure_nc.variables['time'][:]
                 pressure_dates = num2date(pressure_time, pressure_nc.variables['time'].units)
                 
-                    #### loop through the wind timestamps, extract the month and use that to pick which pressure data to use.
+                #### loop through the wind timestamps, extract the month and use that to pick which pressure data to use.
                 for wind_step in range(0, wind_time_dimension):
                 
                     #now find the index of the CLOSEST value and use that
@@ -898,13 +897,13 @@ if __name__ == "__main__":
                     pressure_on_wind_grid[wind_step,:,:]=pressure_regrid_Vals[index_of_min_delta_from_target_date,:,:]
                                     
                                                 
-                    #### save pressureitation pre storm output into a netCDF 
+                #### save pressureitation pre storm output into a netCDF 
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
-                    #### create dataset and provide dimensions
+                #### create dataset and provide dimensions
                 
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
@@ -974,7 +973,7 @@ if __name__ == "__main__":
                 ncout.close();   
                 
                 
-                    #### delete all the variables used during import and saving of pressure      
+                #### delete all the variables used during import and saving of pressure      
                 del newVals, newValsErr ,pressure_on_wind_grid,ncout,pressure_dates, pressure_lat,pressure_lon,pressure_nc
                 del pressure_time,pressure_time_slice,pressure_timesteps,pressure_uncertainty_slice,
                 del processedFilePath,timesteps_pressure,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
@@ -982,13 +981,13 @@ if __name__ == "__main__":
                 print("pressure regridded for Storm = "+storm)    
                 
                 
-                
+                ## SCRIPT CHECKED UP TO HERE ##
                 
                 #### MAXSS Land fraction 
                 
-                    #### create dataset and provide dimensions
+                #### create dataset and provide dimensions
                 
-                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_{3}_{1}_{4}_MAXSS_L4.nc".format(region,year,storm,region_id,storm_id)));
+                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
                 wind_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_land_fraction.nc".format(region,year,storm)));
@@ -1085,7 +1084,7 @@ if __name__ == "__main__":
                     sample_df2 = pd.DataFrame()
                     sample_df2['value'] = values2
                     values2[values2 == -999] = 'nan' # or use np.nan
-                # get from metadata
+                    # get from metadata
                     sample_df3 = pd.DataFrame()
                     sample_df3['value'] = values3
                     values3[values3 == -999] = 'nan' # or use np.nan
@@ -1158,7 +1157,7 @@ if __name__ == "__main__":
                     reynolds_co2_on_wind_grid[wind_step,:,:]=all_reynolds_socatv4_region_subset[month,:,:]
                 
                 
-                    #### save pco2 output into a netCDF 
+                #### save pco2 output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_verification_data_SOCATv4.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
                 # create dataset and provide dimensions
