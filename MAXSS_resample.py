@@ -986,9 +986,9 @@ if __name__ == "__main__":
                 #### MAXSS Land fraction 
                 
                 #### create dataset and provide dimensions
-                
                 winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
                 wind_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
+                
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_land_fraction.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
@@ -1387,7 +1387,7 @@ if __name__ == "__main__":
 
             
 
-                    #### save mask output into a netCDF 
+                #### save mask output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_world_ocean_mask.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
                 # create dataset and provide dimensions
