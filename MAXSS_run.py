@@ -46,7 +46,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         os.makedirs(config_folder_Path)
 
     #copy configuration file template
-    configfiletemplate="MAXSS_configuration_file_template.conf"
+    configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf"
     
     configfilenew=config_folder_Path+storm+ ".conf"
     shutil.copy(configfiletemplate,configfilenew)
