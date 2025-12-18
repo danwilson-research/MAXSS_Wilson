@@ -119,10 +119,13 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     if run_name=="MAXSS_RUN" or run_name=="PRESSURE_RUN":
         filedata = filedata.replace('pressure_path = pressurepath.nc', 'pressure_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc')
         filedata = filedata.replace('pressure_temporalChunking = numberoftimesteps','pressure_temporalChunking ='+str(timestepsinfile))
+        #matching the variable name to that shown in Panoply
+        filedata = filedata.replace('pressure_prod = Sea level pressure', 'pressure_prod = sea_level_pressure')
     else:
         filedata = filedata.replace('pressure_path = pressurepath.nc', 'pressure_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_pressure_pre_storm_reference.nc')
         filedata = filedata.replace('pressure_temporalChunking = numberoftimesteps','pressure_temporalChunking ='+str(timestepsinfile))
-
+        #matching the variable name to that shown in Panoply
+        filedata = filedata.replace('pressure_prod = Sea level pressure', 'pressure_prod = sea_level_pressure')
     # Precipitation path
     if run_name=="MAXSS_RUN" or run_name=="PRECIPITATION_RUN":
         filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc')
@@ -132,10 +135,13 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
 
 
-    # xCO2 air path
+    # pCO2 air path
     filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
     filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
-
+    #update variable name
+    filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = pCO2air_mean')
+    
+    
     # pco2 path
     filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
     filedata = filedata.replace('pgas_sw_temporalChunking = numberoftimesteps','pgas_sw_temporalChunking ='+str(timestepsinfile))
