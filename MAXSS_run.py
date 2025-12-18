@@ -356,7 +356,7 @@ if __name__ == "__main__":
                     
                 #### Need to add temporal chunking to config file
                 #- so need to open wind data to get that
-                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_{3}_{1}_{4}_MAXSS_L4.nc".format(region,year,storm,region_id,storm_id)));
+                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
                 wind_northward = winds_nc.variables['__eo_northward_wind'][:]
                 # need land fraction mask from wind data
                 wind_storm_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
