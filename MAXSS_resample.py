@@ -35,6 +35,7 @@ import itertools
 import pandas as pd
 from scipy.interpolate import griddata
 
+
 def process_slice(valData, errData, outputRes=0.25):
     
     #Handle masked values explicitly to avoid masked element to nan error
@@ -829,18 +830,18 @@ if __name__ == "__main__":
                                 
                 #### MAXSS ERA5 pressure data
 
-                    #### load data
+                #### load data
                 pressure_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_SLP.nc".format(region,year,storm,region_id,storm_id)));
                 #pressure = pressure_nc.variables['__eo_sp'][:]#Sea level pressure
                 pressure_lat = pressure_nc.variables['lat'][:]
                 pressure_lon = pressure_nc.variables['lon'][:]
                 pressure_time = pressure_nc.variables['time'][:]
                 
-                    #### resample pressure to wind grid
+                #### resample pressure to wind grid
                 iCoordMeshes = None; #Initially this is None but will be calculated exactly once. It's a long calculation so doesn't want to be repeated.
                 outputRes = 0.25;
-                    #### Calculate binning information
-                    #Only do this once because it's computationally expensive but the same for all time steps
+                #### Calculate binning information
+                #Only do this once because it's computationally expensive but the same for all time steps
                 if iCoordMeshes is None: 
                     CCILats = pressure_nc.variables['lat'][:]
                     CCILons = pressure_nc.variables['lon'][:]
@@ -981,8 +982,6 @@ if __name__ == "__main__":
                 print("pressure regridded for Storm = "+storm)    
                 
                 
-                ## SCRIPT CHECKED UP TO HERE ##
-                
                 #### MAXSS Land fraction 
                 
                 #### create dataset and provide dimensions
@@ -1018,38 +1017,59 @@ if __name__ == "__main__":
 
                 
 
-                #### Watson 2020 pCO2 dataset- ADD!!
+                #Following section extensively updated to instead use
+                ###Dan Ford dataset which is much more up to date.
                 
+                #### Load in monthly pco2 data (Ford et.,al 2025)
+                #https://zenodo.org/records/15053676
                 
-                #### Gregor 2021 ETHZ pCO2- ADD!!
+                # Setup the download root and month abbreviations
+                downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux"
                 
+                # Month abbreviations: ['jan', 'feb', 'mar', ..., 'dec']
+                month_abbrs = [calendar.month_name[i][:3].lower() for i in range(1, 13)]
                 
-                #### Verification data - pCO2 data monthly SOCAT v4
-                downloadedRoot=("verification_data\\SOCATv4");
-                downloadedFileTemplate = Template(path.join(downloadedRoot,"2010${MM}01_OCF-CO2-GLO-1M-KRG-CLIM.nc"));
-                all_pco2_socatv4 = np.empty((12, 180, 360), dtype=float);
-                all_pco2_socatv4[:] = np.nan
-                all_conc_co2_air_socatv4 = np.empty((12, 180, 360), dtype=float);
-                all_conc_co2_air_socatv4[:] = np.nan
-                all_reynolds_socatv4 = np.empty((12, 180, 360), dtype=float);
-                all_reynolds_socatv4[:] = np.nan
+                #set up download file template
+                downloaded_file_template = Template(
+                    path.join(downloadedRoot, "${YYYY}", "${MM}", "OceanFluxGHG-month${MM}-${MMM}-${YYYY}-v0.nc"))
+                    
+                #initialise the array s for pco2 data
+                all_pco2_data = np.empty((12, 180, 360), dtype=float);
+                all_pco2_data[:] = np.nan
+                all_conc_co2_air_data = np.empty((12, 180, 360), dtype=float);
+                all_conc_co2_air_data[:] = np.nan
+                all_reynolds_data = np.empty((12, 180, 360), dtype=float);
+                all_reynolds_data[:] = np.nan
                 
-                all_pco2_socatv4_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                all_conc_co2_air_socatv4_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                all_reynolds_socatv4_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                all_pco2_data_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                all_conc_co2_air_data_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                all_reynolds_data_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 
-                    #### resample pco2 to wind spatial grid
+               
+                #Resample pco2 data to the wind spatial grid
                 for imonth in range(0, 12):
-                    monthStr = format(imonth+1, "02d");
-                    downloadFilePath = downloadedFileTemplate.safe_substitute(MM=monthStr);
+                    monthStr = format(imonth+1)
+                    monthStr = f"{imonth+1:02d}"
+                    monthAbbr = month_abbrs[imonth]
+                    downloadFilePath = downloaded_file_template.safe_substitute(YYYY=year, MM=monthStr, MMM=monthAbbr)
+                    print(downloadFilePath)
+               
                     pco2_nc = nc.Dataset(downloadFilePath, 'r')
-                    all_pco2_socatv4[:,:] = pco2_nc.variables["fCO2_2010_interpolated_pred"][:,:];
-                    all_conc_co2_air_socatv4[:,:] = pco2_nc.variables["vCO2"][:,:];
-                    all_reynolds_socatv4[:,:] = pco2_nc.variables["Tcl_2010"][:,:];
+                    
+                    #pco2 - sea
+                    all_pco2_data[:,:] = pco2_nc.variables["OBPC"][:,:]
+                    
+                    #pco2 air
+                    all_conc_co2_air_data[:,:] = pco2_nc.variables["pgas_air"][:,:]
+                    
+                    #SST in kelvin (not sure it is reynolds temp)
+                    all_reynolds_data[:,:] = pco2_nc.variables["ST1_Kelvin_mean"][:,:] 
+                    
+                    #pco2_nc.close()
                 
-                    x=all_pco2_socatv4[imonth,:,:]
-                    xa=all_conc_co2_air_socatv4[imonth,:,:]
-                    xb=all_reynolds_socatv4[imonth,:,:]
+                    x=all_pco2_data[imonth,:,:]
+                    xa=all_conc_co2_air_data[imonth,:,:]
+                    xb=all_reynolds_data[imonth,:,:]
                 
                     # to do the interpolation, the grid needs to be as column lists, this does that
                     
@@ -1065,12 +1085,9 @@ if __name__ == "__main__":
                     values2 = xa.flatten(order='F')
                     # reynolds sst at pco2 seawater
                     values3 = xb.flatten(order='F')
-                
-                    
-                    
+
                     sample_df = pd.DataFrame()
                 
-                    
                     #this is first input into interpolation function
                     sample_df['X'] = [xy[0] for xy in xy_coord]
                     sample_df['Y'] = [xy[1] for xy in xy_coord]
@@ -1126,12 +1143,12 @@ if __name__ == "__main__":
                     zzz_subset=zzz[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
                     nnn_subset=nnn[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
                 
-                    # plt.pcolor(yyy_subset)
-                    # plt.pcolor(all_pco2_socatv4_region_subset[1,:,:])
+                    #plt.pcolor(yyy_subset)
+                    #plt.pcolor(all_pco2_data_region_subset[1,:,:])
                 
-                    all_pco2_socatv4_region_subset[imonth,:,:] = yyy_subset;
-                    all_conc_co2_air_socatv4_region_subset[imonth,:,:] = zzz_subset;
-                    all_reynolds_socatv4_region_subset[imonth,:,:] = nnn_subset;
+                    all_pco2_data_region_subset[imonth,:,:] = yyy_subset;
+                    all_conc_co2_air_data_region_subset[imonth,:,:] = zzz_subset;
+                    all_reynolds_data_region_subset[imonth,:,:] = nnn_subset;
                 
                 # make pCO2 matrix the same temporal scale as wind data
                 
@@ -1152,13 +1169,13 @@ if __name__ == "__main__":
                     #need to index at 0 so -1 month
                     month=a[1]-1
                     
-                    pco2_on_wind_grid[wind_step,:,:]=all_pco2_socatv4_region_subset[month,:,:]
-                    conc_pco2_air_on_wind_grid[wind_step,:,:]=all_conc_co2_air_socatv4_region_subset[month,:,:]
-                    reynolds_co2_on_wind_grid[wind_step,:,:]=all_reynolds_socatv4_region_subset[month,:,:]
+                    pco2_on_wind_grid[wind_step,:,:]=all_pco2_data_region_subset[month,:,:]
+                    conc_pco2_air_on_wind_grid[wind_step,:,:]=all_conc_co2_air_data_region_subset[month,:,:]
+                    reynolds_co2_on_wind_grid[wind_step,:,:]=all_reynolds_data_region_subset[month,:,:]
                 
                 
                 #### save pco2 output into a netCDF 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_verification_data_SOCATv4.nc".format(region,year,storm)));
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_Ford_et_al_pco2.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
                 # create dataset and provide dimensions
                 
@@ -1182,20 +1199,20 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("pCO2water_mean", float, ("time","lat", "lon"));
-                var.units = "uatm";
-                var.long_name = "Mean monthly pco2 resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                var.units = "microatm";
+                var.long_name = "Monthly pco2 resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = pco2_on_wind_grid;
                 
                 #data variables
-                var = ncout.createVariable("xCO2air_mean", float, ("time","lat", "lon"));
-                var.units = "ppm";
-                var.long_name = "Mean monthly conc co2 in air resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                var = ncout.createVariable("pCO2air_mean", float, ("time","lat", "lon"));
+                var.units = "microatm";
+                var.long_name = "Monthly pco2 in air resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = conc_pco2_air_on_wind_grid;
                 
                 #data variables
                 var = ncout.createVariable("reynolds_temperature_mean", float, ("time","lat", "lon"));
                 var.units = "kelvin";
-                var.long_name = "Mean monthly reynolds SST with pco2 seawater resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                var.long_name = "Monthly Sea surface skin temperature resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = reynolds_co2_on_wind_grid;
                 
                 ncout.close();   
@@ -1203,6 +1220,9 @@ if __name__ == "__main__":
                 print("CO2 regridded for Storm = "+storm)
                 
                 
+                ##UP TO HERE ##
+                
+                ##NOT SURE IF I NEED TO USE CODE BELOW THIS POINT
                 
                 
                 #### Verification data - atm pressure data monthly ECMWF
