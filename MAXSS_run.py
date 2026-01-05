@@ -48,7 +48,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     #copy configuration file template
     configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf"
     
-    configfilenew=config_folder_Path+storm+ ".conf"
+    configfilenew = os.path.join(config_folder_Path, f"{storm}.conf")
     shutil.copy(configfiletemplate,configfilenew)
 
 
@@ -198,7 +198,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time):
     #The total flux is then the sum of these fluxes
     
     # Get all files and directories ending with .nc
-    Fe_oututfile_list=(glob(fe.runParams.output_dir+r"\*.nc")) 
+    Fe_oututfile_list = glob(os.path.join(fe.runParams.output_dir, "*.nc"))
     
     #get the temporal resolution from the fluxengine
     #turn it into hours
@@ -252,7 +252,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time):
     if not os.path.exists(Int_flux_folder_Path):
         os.makedirs(Int_flux_folder_Path)
 
-    processedFilePath = Int_flux_folder_Path+"\\"+storm+"_"+run_name+ ".nc";
+    processedFilePath = os.path.join(Int_flux_folder_Path, f"{storm}_{run_name}.nc")
 
     ncout = Dataset(processedFilePath, 'w');
     
