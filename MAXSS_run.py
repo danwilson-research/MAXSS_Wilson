@@ -214,7 +214,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, wind_
     for fluxfile_number in range(0, len(Fe_oututfile_list)):
         #Load using with so that .nc file automatically closed after use
         with nc.Dataset(Fe_oututfile_list[fluxfile_number]) as flux_nc:
-                        
+                     
             #load in the flux data
             Flux_data=flux_nc.variables['OF'][:,:]
             #now scale the fluxes
@@ -363,16 +363,17 @@ if __name__ == "__main__":
                     
                 #### Need to add temporal chunking to config file
                 #- so need to open wind data to get that
-                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
-                wind_northward = winds_nc.variables['__eo_northward_wind'][:]
-                # need land fraction mask from wind data
-                wind_storm_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
-                wind_time_dimension=len(wind_northward)
-                timestepsinfile=wind_time_dimension
-                
-                #### get start and end times - to be added to run call
-                wind_time = winds_nc.variables['time'][:]
-                wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
+                # Use 'with' to ensure the wind file closes immediately after extracting metadata
+                with nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id))) as winds_nc:
+                    wind_northward = winds_nc.variables['__eo_northward_wind'][:]
+                    # need land fraction mask from wind data
+                    wind_storm_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
+                    wind_time_dimension=len(wind_northward)
+                    timestepsinfile=wind_time_dimension
+                    
+                    #### get start and end times - to be added to run call
+                    wind_time = winds_nc.variables['time'][:]
+                    wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
 
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
                 run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
