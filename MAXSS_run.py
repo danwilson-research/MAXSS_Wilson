@@ -216,11 +216,11 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, wind_
         with nc.Dataset(Fe_oututfile_list[fluxfile_number]) as flux_nc:
                      
             #load in the flux data
-            Flux_data=flux_nc.variables['OF'][:,:]
+            Flux_data=flux_nc.variables['OF'][:,:] #DOES THIS NEED CHANGING? [:] (Appeared not to impact results)
             #now scale the fluxes
             Scaledfluxes=Flux_data*areagrid*(1-wind_storm_land_fraction)*(fe_temporal_hours/24)# g C hr-1 per unit area of the grid cell
-            #now sum the fluxes over the whole region
-            Integrated_regional_flux=np.sum(Scaledfluxes,axis =(1,2))#sum over spatial dimension
+            #now sum the fluxes over the whole region (Dan changed to nansum to allow calculation where nan values present)
+            Integrated_regional_flux=np.nansum(Scaledfluxes,axis =(1,2))#sum over spatial dimension
             Time_data=flux_nc.variables['time'][:]
             
             #appendthe integrated flux and time to a combined Matrix.
@@ -244,7 +244,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, wind_
     time_for_plotting=get_datetimes(time_arr2)
 
     #total flux in region across all timesteps
-    Regiona_flux_Tg=np.sum(Hourly_regional_flux_Tg)
+    Regiona_flux_Tg=np.nansum(Hourly_regional_flux_Tg) #Dan changed this to nansum to ensure data with nans was summed
     
     
     #### Save these to a folder
@@ -378,7 +378,7 @@ if __name__ == "__main__":
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
                 run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
           
-                #run_endtime=wind_dates[23].strftime("%Y-%m-%d %H:%M")# # TO ONLY RUN FOR ONE timestep
+                run_endtime=wind_dates[48].strftime("%Y-%m-%d %H:%M")# # TO ONLY RUN FOR THREE DAYS
                 
 
                 #### Run flux engine for 'MAXSS run'
