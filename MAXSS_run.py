@@ -349,7 +349,7 @@ if __name__ == "__main__":
                 elif region=="east-pacific":
                     region_id="EP"
                 elif region=="north-indian":
-                    region_id="EP"
+                    region_id="NI"
                 elif region=="south-atlantic":
                     region_id="SA"
                 elif region=="south-indian":
