@@ -737,7 +737,6 @@ if __name__ == "__main__":
                                     
                                 
                 # flux engine expects rain in mm d-1 whereas ERA5 are m every hour
-                
                 unit_conversion_factor_rain= (24/1)*100
                 precip_on_wind_grid=precip_on_wind_grid*unit_conversion_factor_rain
                           
@@ -1060,7 +1059,7 @@ if __name__ == "__main__":
                     all_pco2_data[:,:] = pco2_nc.variables["OBPC"][:,:]
                     
                     #pco2 air
-                    all_conc_co2_air_data[:,:] = pco2_nc.variables["pgas_air"][:,:]
+                    all_conc_co2_air_data[:,:] = pco2_nc.variables["V_gas"][:,:]
                     
                     #SST in kelvin (not sure it is reynolds temp)
                     all_reynolds_data[:,:] = pco2_nc.variables["ST1_Kelvin_mean"][:,:] 
@@ -1204,9 +1203,9 @@ if __name__ == "__main__":
                 var[:] = pco2_on_wind_grid;
                 
                 #data variables
-                var = ncout.createVariable("pCO2air_mean", float, ("time","lat", "lon"));
-                var.units = "microatm";
-                var.long_name = "Monthly pco2 in air resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                var = ncout.createVariable("V_gas", float, ("time","lat", "lon"));
+                var.units = "micromol mol-1";
+                var.long_name = "Concentration CO2 in dry air (ppm) or dry molecular fraction of CO2 in the atmosphere (umol mol-1)";
                 var[:] = conc_pco2_air_on_wind_grid;
                 
                 #data variables
