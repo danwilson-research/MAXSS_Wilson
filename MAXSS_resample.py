@@ -1062,7 +1062,7 @@ if __name__ == "__main__":
                     all_conc_co2_air_data[:,:] = pco2_nc.variables["V_gas"][:,:]
                     
                     #SST in kelvin (not sure it is reynolds temp)
-                    all_reynolds_data[:,:] = pco2_nc.variables["ST1_Kelvin_mean"][:,:] 
+                    all_reynolds_data[:,:] = pco2_nc.variables["FT1_Kelvin_mean"][:,:] 
                     
                     #pco2_nc.close()
                 
