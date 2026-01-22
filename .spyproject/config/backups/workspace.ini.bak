@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['MAXSS_resample.py', 'MAXSS_run.py', 'MAXSS_plot.py', 'comparing fluxengine outputs.py', 'regrid and compare fluxengine output.py', 'comparing OBPC variable.py', 'troubleshooting fluxengine issues\\map the OBPC variable goign into and out of fluxengine.py']
+recent_files = ['MAXSS_resample.py', 'MAXSS_run.py', 'MAXSS_plot.py', 'comparing fluxengine outputs.py', 'regrid and compare fluxengine output.py', 'comparing OBPC variable.py', 'troubleshooting fluxengine issues\\map the OBPC variable goign into and out of fluxengine.py', 'compare output from my fluxengine with dan f ocean flux at single location.py', 'compare raw and regridded OBPC variable.py', 'compare raw and regridded pco2 temperature variable.py']
 
 [main]
 version = 0.2.0
