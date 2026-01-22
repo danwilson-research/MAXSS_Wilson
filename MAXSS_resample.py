@@ -34,6 +34,7 @@ import cartopy.crs as ccrs
 import itertools
 import pandas as pd
 from scipy.interpolate import griddata
+from scipy.spatial import cKDTree
 
 
 def process_slice(valData, errData, outputRes=0.25):
@@ -1016,138 +1017,173 @@ if __name__ == "__main__":
 
                 
 
-                #Following section extensively updated to instead use
-                ###Dan Ford dataset which is much more up to date.
+                # Following section extensively updated from Richards code to use
+                # Ocean Flux dataset from Dan Ford which is more up to date.
+                
                 
                 #### Load in monthly pco2 data (Ford et.,al 2025)
                 #https://zenodo.org/records/15053676
                 
-                # Setup the download root and month abbreviations
+                # Setup the download root
                 downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux"
                 
-                # Month abbreviations: ['jan', 'feb', 'mar', ..., 'dec']
+                # Set up month abbreviations: ['jan', 'feb', 'mar', ..., 'dec']
                 month_abbrs = [calendar.month_name[i][:3].lower() for i in range(1, 13)]
                 
-                #set up download file template
+                # set up download file template
                 downloaded_file_template = Template(
                     path.join(downloadedRoot, "${YYYY}", "${MM}", "OceanFluxGHG-month${MM}-${MMM}-${YYYY}-v0.nc"))
                     
-                #initialise the array s for pco2 data
-                all_pco2_data = np.empty((12, 180, 360), dtype=float);
-                all_pco2_data[:] = np.nan
-                all_conc_co2_air_data = np.empty((12, 180, 360), dtype=float);
-                all_conc_co2_air_data[:] = np.nan
-                all_reynolds_data = np.empty((12, 180, 360), dtype=float);
-                all_reynolds_data[:] = np.nan
+                # 1. DEFINE TARGET REGION 
+                # wind_lon is your original -180 to 180 array.
+                # target_lons_360 is the version we use for interpolation.
+                target_lons_360 = (wind_lon + 360) % 360
+                target_lats = wind_lat
                 
-                all_pco2_data_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                all_conc_co2_air_data_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                all_reynolds_data_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                # Create the 2D meshgrid using the 0-360 longitudes
+                region_grid_x, region_grid_y = np.meshgrid(target_lons_360, target_lats)
                 
-               
-                #Resample pco2 data to the wind spatial grid
+                # 2. PREPARE STORAGE ARRAYS
+                # Dimensions derived directly from your wind grid
+                subset_lat_dim = len(target_lats)
+                subset_lon_dim = len(target_lons_360)
+                
+                all_pco2_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
+                all_conc_co2_air_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
+                all_reynolds_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
+
+                # 3. LOOP THROUGH MONTHS
                 for imonth in range(0, 12):
-                    monthStr = format(imonth+1)
                     monthStr = f"{imonth+1:02d}"
                     monthAbbr = month_abbrs[imonth]
                     downloadFilePath = downloaded_file_template.safe_substitute(YYYY=year, MM=monthStr, MMM=monthAbbr)
-                    print(downloadFilePath)
-               
-                    pco2_nc = nc.Dataset(downloadFilePath, 'r')
-                    
-                    #pco2 - sea
-                    all_pco2_data[:,:] = pco2_nc.variables["OBPC"][:,:]
-                    
-                    #pco2 air
-                    all_conc_co2_air_data[:,:] = pco2_nc.variables["V_gas"][:,:]
-                    
-                    #SST in kelvin (not sure it is reynolds temp)
-                    all_reynolds_data[:,:] = pco2_nc.variables["FT1_Kelvin_mean"][:,:] 
-                    
-                    #pco2_nc.close()
+                    print(f"Processing Month {imonth+1}: {downloadFilePath}")
                 
-                    x=all_pco2_data[imonth,:,:]
-                    xa=all_conc_co2_air_data[imonth,:,:]
-                    xb=all_reynolds_data[imonth,:,:]
-                
-                    # to do the interpolation, the grid needs to be as column lists, this does that
-                    
-                    #these lines list lat and long of all points as columns
-                    x_coord_range = [i for i in range(0, 360, 1)]
-                    y_coord_range = [i for i in range(0, 180, 1)]
-                    xy_coord = list(itertools.product(x_coord_range, y_coord_range))
-                    
-                    #turn 2d data grid of data to column
-                    #pco2 sw
-                    values = x.flatten(order='F')
-                    #conc co2 air
-                    values2 = xa.flatten(order='F')
-                    # reynolds sst at pco2 seawater
-                    values3 = xb.flatten(order='F')
+                    try:
+                        with nc.Dataset(downloadFilePath, 'r') as pco2_nc:
+                            
+                            # --- A. DYNAMIC COORDINATE READING ---
+                            # Read what is actually in the file (handling common variable names)
+                            if 'lon' in pco2_nc.variables:
+                                src_lon = pco2_nc.variables['lon'][:]
+                                src_lat = pco2_nc.variables['lat'][:]
+                            elif 'longitude' in pco2_nc.variables:
+                                src_lon = pco2_nc.variables['longitude'][:]
+                                src_lat = pco2_nc.variables['latitude'][:]
+                            else:
+                                raise ValueError("Could not find 'lon' or 'longitude' variable in NetCDF.")
 
-                    sample_df = pd.DataFrame()
-                
-                    #this is first input into interpolation function
-                    sample_df['X'] = [xy[0] for xy in xy_coord]
-                    sample_df['Y'] = [xy[1] for xy in xy_coord]
-                    
-                    #this is second input into interpolation function
-                    sample_df1 = pd.DataFrame()
-                    sample_df1['value'] = values
-                    
-                    values[values == -999] = 'nan' # or use np.nan
-                
-                    sample_df2 = pd.DataFrame()
-                    sample_df2['value'] = values2
-                    values2[values2 == -999] = 'nan' # or use np.nan
-                    # get from metadata
-                    sample_df3 = pd.DataFrame()
-                    sample_df3['value'] = values3
-                    values3[values3 == -999] = 'nan' # or use np.nan
-                
-                    #this is the new grid for the data. global 0.25 degree
-                    grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
-                
-                    #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
-                    grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
-                    grid_z1a = griddata(sample_df, sample_df2, (grid_x,grid_y), method='linear')
-                    grid_z1b = griddata(sample_df, sample_df3, (grid_x,grid_y), method='linear')
-                
-                    #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
-                
-                    yyy=grid_z1[:,:,0]
-                    yyy=np.rot90(yyy,1)
-                    yyy=np.flipud(yyy)
-                
-                    zzz=grid_z1a[:,:,0]
-                    zzz=np.rot90(zzz,1)
-                    zzz=np.flipud(zzz)
-                
-                    nnn=grid_z1b[:,:,0]
-                    nnn=np.rot90(nnn,1)
-                    nnn=np.flipud(nnn)
-                
-                    #plt.pcolor(yyy)
-                    lon_new_grid = np.arange(-180, 180, 0.25)
-                    lat_new_grid = np.arange(-90, 90, 0.25)
-                
-                    #now work out the subset of the data o extract pco2 for!
-                    max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
-                    min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
-                
-                    max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
-                    min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
-                    
-                    yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
-                    zzz_subset=zzz[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
-                    nnn_subset=nnn[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
-                
-                    #plt.pcolor(yyy_subset)
-                    #plt.pcolor(all_pco2_data_region_subset[1,:,:])
-                
-                    all_pco2_data_region_subset[imonth,:,:] = yyy_subset;
-                    all_conc_co2_air_data_region_subset[imonth,:,:] = zzz_subset;
-                    all_reynolds_data_region_subset[imonth,:,:] = nnn_subset;
+                            # Detect Source Domain (Is it 0-360 or -180 to 180?)
+                            source_is_180 = np.min(src_lon) < 0
+                            
+                            # --- B. ADJUST TARGET GRID TO MATCH SOURCE ---
+                            # We adjust our target grid (region_grid_x) to match the file's system
+                            # so griddata can find the points.
+                            
+                            adjusted_region_grid_x = region_grid_x.copy()
+                            
+                            if source_is_180:
+                                # Source is -180 to 180. 
+                                # Convert our 0-360 target grid to -180 to 180.
+                                # (Points > 180 become negative)
+                                adjusted_region_grid_x = np.where(adjusted_region_grid_x > 180, 
+                                                                  adjusted_region_grid_x - 360, 
+                                                                  adjusted_region_grid_x)
+                            else:
+                                # Source is 0 to 360.
+                                # Ensure our target grid is 0-360
+                                adjusted_region_grid_x = adjusted_region_grid_x % 360
+
+                            # --- C. SAFETY CHECK ---
+                            if pco2_nc.variables["OBPC"].shape[0] != 1:
+                                raise ValueError("CRITICAL ERROR: File contains multiple timesteps.")
+
+                            # Extract variables
+                            raw_pco2 = pco2_nc.variables["OBPC"][0, :, :]
+                            raw_air = pco2_nc.variables["V_gas"][0, :, :]
+                            raw_sst = pco2_nc.variables["FT1_Kelvin_mean"][0, :, :]
+                            
+                            # --- D. WRAP SOURCE DATA (Seamless Global) ---
+                            # Wrap coords to close the global seam
+                            src_lon_wrapped = np.concatenate(([src_lon[-1] - 360], src_lon, [src_lon[0] + 360]))
+                            
+                            # Pad Data
+                            pco2_wrapped = np.pad(raw_pco2, ((0,0), (1,1)), mode='wrap')
+                            air_wrapped  = np.pad(raw_air,  ((0,0), (1,1)), mode='wrap')
+                            sst_wrapped  = np.pad(raw_sst,  ((0,0), (1,1)), mode='wrap')
+                            
+                            # Flatten Source for griddata
+                            src_lon_grid_w, src_lat_grid_w = np.meshgrid(src_lon_wrapped, src_lat)
+                            flat_lons = src_lon_grid_w.flatten()
+                            flat_lats = src_lat_grid_w.flatten()
+                            flat_pco2 = pco2_wrapped.flatten()
+                            flat_air  = air_wrapped.flatten()
+                            flat_sst  = sst_wrapped.flatten()
+
+                            # --- E. FILTER MASK (Fixes Land Bleeding) ---
+                            # Only interpolate using valid ocean points
+                            valid_mask = ~np.ma.getmaskarray(flat_pco2) & ~np.isnan(flat_pco2)
+                            
+                            points_valid = np.column_stack((flat_lons[valid_mask], flat_lats[valid_mask]))
+                            values_pco2_valid = flat_pco2[valid_mask]
+                            values_air_valid  = flat_air[valid_mask]
+                            values_sst_valid  = flat_sst[valid_mask]
+
+                            # --- F. INTERPOLATE ---
+                            all_pco2_data_region_subset[imonth, :, :] = griddata(
+                                points_valid, 
+                                values_pco2_valid, 
+                                (adjusted_region_grid_x, region_grid_y), 
+                                method='linear'
+                            )
+                            
+                            all_conc_co2_air_data_region_subset[imonth, :, :] = griddata(
+                                points_valid, 
+                                values_air_valid, 
+                                (adjusted_region_grid_x, region_grid_y), 
+                                method='linear'
+                            )
+                            
+                            all_reynolds_data_region_subset[imonth, :, :] = griddata(
+                                points_valid, 
+                                values_sst_valid, 
+                                (adjusted_region_grid_x, region_grid_y), 
+                                method='linear'
+                            )
+                            
+                            # --- F: POST-INTERPOLATION LAND MASK ---
+                            # 1. Build a Tree of your VALID source points (the ocean data)
+                            #    (points_valid is already defined in your code as the X/Y of real ocean data)
+                            tree = cKDTree(points_valid)
+                            
+                            # 2. Prepare your Target Grid points for querying
+                            #    We need a list of every (Lon, Lat) you just interpolated onto
+                            #    (Flattening the 2D meshgrids into a list of points)
+                            target_points_flat = np.column_stack((adjusted_region_grid_x.flatten(), region_grid_y.flatten()))
+                            
+                            # 3. Find the distance to the nearest valid source point for every target point
+                            #    dists will be an array of distances in degrees
+                            dists, _ = tree.query(target_points_flat)
+                            
+                            # 4. Reshape the distance array back to the 2D grid shape (lat, lon)
+                            dists_grid = dists.reshape(adjusted_region_grid_x.shape)
+                            
+                            # 5. Apply the Mask
+                            #    The Ford dataset is likely 1x1 degree resolution. 
+                            #    The diagonal of a 1x1 box is ~1.41 degrees.
+                            #    So, if a point is > 1.5 degrees from data, it's likely in a "gap" (land).
+                            GAP_THRESHOLD = 1.5  # Degrees. Adjust this if needed (e.g. 2.0 or 1.2)
+                            
+                            # Create a boolean mask where the distance is too big
+                            is_land_gap = dists_grid > GAP_THRESHOLD
+                            
+                            # Set those points to NaN in your data arrays
+                            all_pco2_data_region_subset[imonth, :, :][is_land_gap] = np.nan
+                            all_conc_co2_air_data_region_subset[imonth, :, :][is_land_gap] = np.nan
+                            all_reynolds_data_region_subset[imonth, :, :][is_land_gap] = np.nan
+                            
+                    except FileNotFoundError:
+                        print(f"Warning: File not found for {monthAbbr}-{year}")
                 
                 # make pCO2 matrix the same temporal scale as wind data
                 
@@ -1173,7 +1209,7 @@ if __name__ == "__main__":
                     reynolds_co2_on_wind_grid[wind_step,:,:]=all_reynolds_data_region_subset[month,:,:]
                 
                 
-                #### save pco2 output into a netCDF 
+                # 4. save pco2 output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_Ford_et_al_pco2.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
                 # create dataset and provide dimensions
