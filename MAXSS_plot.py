@@ -21,8 +21,8 @@ from pyproj import Geod # use pyproj as it is documented code
 import inspect;
 Month_Fmt = mdates.DateFormatter('%b %d')
 
-runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SSS_RUN","PRESSURE_RUN"]
-#runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SST_RUN","PRESSURE_RUN"]
+runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SST_RUN","SSS_RUN","PRESSURE_RUN"]
+#runs=["MAXSS_RUN","REF_RUN","WIND_RUN","PRESSURE_RUN"]
 
 # 1. Define your color map at the top of your script or before the plot
 run_colors = {

@@ -113,6 +113,12 @@ if __name__ == "__main__":
             storm_counter=0
             #### Loop through the storms for each year in the MAXSS storm dataset 
             for storm in MAXSS_storms:
+                
+                ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
+                if any(name in storm for name in ["ALEX", "BONNIE"]):
+                    print(f"Skipping storm: {storm}")
+                    storm_counter += 1 # Important: increment the counter before skipping
+                    continue
 
                 #directory for storm being processes
                 storm_dir=storm_directory_list[storm_counter]
@@ -1260,215 +1266,215 @@ if __name__ == "__main__":
                 ##NOT SURE IF I NEED TO USE CODE BELOW THIS POINT
                 
                 
-                #### Verification data - atm pressure data monthly ECMWF
-                downloadedRoot=("verification_data\\air_pressure\\2010");
-                downloadedFileTemplate = Template(path.join(downloadedRoot,"2010${MM}_OCF-PRE-GLO-1M-100-ECMWF.nc"));
-                all_air_pressure = np.empty((12, 180, 360), dtype=float);
+                # #### Verification data - atm pressure data monthly ECMWF
+                # downloadedRoot=("verification_data\\air_pressure\\2010");
+                # downloadedFileTemplate = Template(path.join(downloadedRoot,"2010${MM}_OCF-PRE-GLO-1M-100-ECMWF.nc"));
+                # all_air_pressure = np.empty((12, 180, 360), dtype=float);
                 
-                all_air_pressure_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                
-                
-                    #### resample atmospheric pressure to wind spatial grid
-                for imonth in range(0, 12):
-                    monthStr = format(imonth+1, "02d");
-                    downloadFilePath = downloadedFileTemplate.safe_substitute(MM=monthStr);
-                    air_pressure_nc = nc.Dataset(downloadFilePath, 'r')
-                    all_air_pressure[:,:] = air_pressure_nc.variables["msl_mean"][:,:];
+                # all_air_pressure_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 
                 
-                    x=all_air_pressure[imonth,:,:]
+                #     #### resample atmospheric pressure to wind spatial grid
+                # for imonth in range(0, 12):
+                #     monthStr = format(imonth+1, "02d");
+                #     downloadFilePath = downloadedFileTemplate.safe_substitute(MM=monthStr);
+                #     air_pressure_nc = nc.Dataset(downloadFilePath, 'r')
+                #     all_air_pressure[:,:] = air_pressure_nc.variables["msl_mean"][:,:];
                 
-                    # to do the interpolation, the grid needs to be as column lists, this does that
+                
+                #     x=all_air_pressure[imonth,:,:]
+                
+                #     # to do the interpolation, the grid needs to be as column lists, this does that
                     
-                    #these lines list lat and long of all points as columns
-                    x_coord_range = [i for i in range(0, 360, 1)]
-                    y_coord_range = [i for i in range(0, 180, 1)]
-                    xy_coord = list(itertools.product(x_coord_range, y_coord_range))
+                #     #these lines list lat and long of all points as columns
+                #     x_coord_range = [i for i in range(0, 360, 1)]
+                #     y_coord_range = [i for i in range(0, 180, 1)]
+                #     xy_coord = list(itertools.product(x_coord_range, y_coord_range))
                     
-                    #turn 2d data grid of data to column
-                    #air pressure
-                    values = x.flatten(order='F')
+                #     #turn 2d data grid of data to column
+                #     #air pressure
+                #     values = x.flatten(order='F')
                 
-                    sample_df = pd.DataFrame()
-                
-                    
-                    #this is first input into interpolation function
-                    sample_df['X'] = [xy[0] for xy in xy_coord]
-                    sample_df['Y'] = [xy[1] for xy in xy_coord]
-                    
-                    #this is second input into interpolation function
-                    sample_df1 = pd.DataFrame()
-                    sample_df1['value'] = values
+                #     sample_df = pd.DataFrame()
                 
                     
-                    #this is the new grid for the data. global 0.25 degree
-                    grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
-                
-                    #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
-                    grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
-                
-                
-                    #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
-                
-                    yyy=grid_z1[:,:,0]
-                    yyy=np.rot90(yyy,1)
-                    yyy=np.flipud(yyy)
-                
-                
-                    #plt.pcolor(yyy)
-                    lon_new_grid = np.arange(-180, 180, 0.25)
-                    lat_new_grid = np.arange(-90, 90, 0.25)
-                
-                    #now work out the subset of the data o extract pco2 for!
-                    max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
-                    min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
-                
-                    max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
-                    min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
+                #     #this is first input into interpolation function
+                #     sample_df['X'] = [xy[0] for xy in xy_coord]
+                #     sample_df['Y'] = [xy[1] for xy in xy_coord]
                     
-                    yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
+                #     #this is second input into interpolation function
+                #     sample_df1 = pd.DataFrame()
+                #     sample_df1['value'] = values
                 
-                    # plt.pcolor(yyy_subset)
-                    # plt.pcolor(all_air_pressure_region_subset[1,:,:])
-                
-                    all_air_pressure_region_subset[imonth,:,:] = yyy_subset;
-                
-                    #### make pCO2 matrix the same temporal scale as wind data
-                
-                #create empty pco2 grid the same size as the wind data.
-                air_pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                
-                
-                    #### loop through the wind timestamps, 
-                    #extract the month and use that to pick which pressure data to use.
-                for wind_step in range(0, wind_time_dimension):
-                
-                    a=wind_dates[wind_step].timetuple()
-                    #this is month a[1]
-                    #indexing starts at 0 so minus 1
-                    month=a[1]-1
                     
-                    air_pressure_on_wind_grid[wind_step,:,:]=all_air_pressure_region_subset[month,:,:]
+                #     #this is the new grid for the data. global 0.25 degree
+                #     grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
                 
-                    #### save air pressure output into a netCDF 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_verification_data_ECMWF_air_pressure.nc".format(region,year,storm)));
-                ncout = Dataset(processedFilePath, 'w');
-                    #### create dataset and provide dimensions
+                #     #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
+                #     grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
                 
-                ncout.createDimension("lat", wind_lat_dimension);
-                ncout.createDimension("lon", wind_lon_dimension);
-                ncout.createDimension("time", wind_time_dimension);
                 
-                #dimension variables
-                var = ncout.createVariable("lat", float, ("lat",));
-                var.units = "lat (degrees North)";
-                var[:] = wind_lat;
+                #     #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
                 
-                var = ncout.createVariable("lon", float, ("lon",));
-                var.units = "lon (degrees East)";
-                var[:] = wind_lon;
+                #     yyy=grid_z1[:,:,0]
+                #     yyy=np.rot90(yyy,1)
+                #     yyy=np.flipud(yyy)
                 
-                var = ncout.createVariable("time", int, ("time",));
-                var.long_name = "Time";
-                var.units = "seconds since 1981-01-01";
-                var[:] = wind_time
                 
-                #data variables
-                var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"));
-                var.units = "pascals";
-                var.long_name = "Mean monthly air pressure resampled to hourly on a 0.25X0.25 degree spatial resolution";
-                var[:] = air_pressure_on_wind_grid;
+                #     #plt.pcolor(yyy)
+                #     lon_new_grid = np.arange(-180, 180, 0.25)
+                #     lat_new_grid = np.arange(-90, 90, 0.25)
                 
-                ncout.close();   
-                print("Air pressure regridded for Storm = "+storm)
+                #     #now work out the subset of the data o extract pco2 for!
+                #     max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
+                #     min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
+                
+                #     max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
+                #     min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
+                    
+                #     yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
+                
+                #     # plt.pcolor(yyy_subset)
+                #     # plt.pcolor(all_air_pressure_region_subset[1,:,:])
+                
+                #     all_air_pressure_region_subset[imonth,:,:] = yyy_subset;
+                
+                #     #### make pCO2 matrix the same temporal scale as wind data
+                
+                # #create empty pco2 grid the same size as the wind data.
+                # air_pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                
+                
+                #     #### loop through the wind timestamps, 
+                #     #extract the month and use that to pick which pressure data to use.
+                # for wind_step in range(0, wind_time_dimension):
+                
+                #     a=wind_dates[wind_step].timetuple()
+                #     #this is month a[1]
+                #     #indexing starts at 0 so minus 1
+                #     month=a[1]-1
+                    
+                #     air_pressure_on_wind_grid[wind_step,:,:]=all_air_pressure_region_subset[month,:,:]
+                
+                #     #### save air pressure output into a netCDF 
+                # processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_verification_data_ECMWF_air_pressure.nc".format(region,year,storm)));
+                # ncout = Dataset(processedFilePath, 'w');
+                #     #### create dataset and provide dimensions
+                
+                # ncout.createDimension("lat", wind_lat_dimension);
+                # ncout.createDimension("lon", wind_lon_dimension);
+                # ncout.createDimension("time", wind_time_dimension);
+                
+                # #dimension variables
+                # var = ncout.createVariable("lat", float, ("lat",));
+                # var.units = "lat (degrees North)";
+                # var[:] = wind_lat;
+                
+                # var = ncout.createVariable("lon", float, ("lon",));
+                # var.units = "lon (degrees East)";
+                # var[:] = wind_lon;
+                
+                # var = ncout.createVariable("time", int, ("time",));
+                # var.long_name = "Time";
+                # var.units = "seconds since 1981-01-01";
+                # var[:] = wind_time
+                
+                # #data variables
+                # var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"));
+                # var.units = "pascals";
+                # var.long_name = "Mean monthly air pressure resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                # var[:] = air_pressure_on_wind_grid;
+                
+                # ncout.close();   
+                # print("Air pressure regridded for Storm = "+storm)
 
                 
  
                 
-                #### world seas mask
-                downloadedRoot=("verification_data\\");
-                downloadFilePath = path.join(downloadedRoot,"World_Seas-final-complete_IGA.nc");
-                world_seas = np.empty((180, 360), dtype=float);
-                world_seas_nc = nc.Dataset(downloadFilePath, 'r')
-                world_seas[:,:] = world_seas_nc.variables["sea-mask"][:,:];
-                x=world_seas[:,:]
+                # #### world seas mask
+                # downloadedRoot=("verification_data\\");
+                # downloadFilePath = path.join(downloadedRoot,"World_Seas-final-complete_IGA.nc");
+                # world_seas = np.empty((180, 360), dtype=float);
+                # world_seas_nc = nc.Dataset(downloadFilePath, 'r')
+                # world_seas[:,:] = world_seas_nc.variables["sea-mask"][:,:];
+                # x=world_seas[:,:]
 
                 
-                #these lines list lat and long of all points as columns
-                x_coord_range = [i for i in range(0, 360, 1)]
-                y_coord_range = [i for i in range(0, 180, 1)]
-                xy_coord = list(itertools.product(x_coord_range, y_coord_range))
+                # #these lines list lat and long of all points as columns
+                # x_coord_range = [i for i in range(0, 360, 1)]
+                # y_coord_range = [i for i in range(0, 180, 1)]
+                # xy_coord = list(itertools.product(x_coord_range, y_coord_range))
                 
-                #turn 2d data grid of data to column
-                values = x.flatten(order='F')
+                # #turn 2d data grid of data to column
+                # values = x.flatten(order='F')
                  
-                sample_df = pd.DataFrame()
+                # sample_df = pd.DataFrame()
 
-                #this is first input into interpolation function
-                sample_df['X'] = [xy[0] for xy in xy_coord]
-                sample_df['Y'] = [xy[1] for xy in xy_coord]
+                # #this is first input into interpolation function
+                # sample_df['X'] = [xy[0] for xy in xy_coord]
+                # sample_df['Y'] = [xy[1] for xy in xy_coord]
                 
-                #this is second input into interpolation function
-                sample_df1 = pd.DataFrame()
-                sample_df1['value'] = values
+                # #this is second input into interpolation function
+                # sample_df1 = pd.DataFrame()
+                # sample_df1['value'] = values
                 
-                values[values == -999] = 'nan' # or use np.nan
+                # values[values == -999] = 'nan' # or use np.nan
         
-                #this is the new grid for the data. global 0.25 degree
-                grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
+                # #this is the new grid for the data. global 0.25 degree
+                # grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
             
-                #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
-                #grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
-                grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
+                # #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
+                # #grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
+                # grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
 
-                #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
+                # #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
             
-                yyy=grid_z1[:,:,0]
-                yyy=np.rot90(yyy,1)
-                #yyy=np.flipud(yyy)
+                # yyy=grid_z1[:,:,0]
+                # yyy=np.rot90(yyy,1)
+                # #yyy=np.flipud(yyy)
             
-                #plt.pcolor(yyy)
-                lon_new_grid = np.arange(-180, 180, 0.25)
-                lat_new_grid = np.arange(-90, 90, 0.25)
+                # #plt.pcolor(yyy)
+                # lon_new_grid = np.arange(-180, 180, 0.25)
+                # lat_new_grid = np.arange(-90, 90, 0.25)
             
-                #now work out the subset of the data to extract for!
-                max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
-                min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
+                # #now work out the subset of the data to extract for!
+                # max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
+                # min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
             
-                max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
-                min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
+                # max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
+                # min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
                 
-                yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
+                # yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
 
             
 
-                #### save mask output into a netCDF 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_world_ocean_mask.nc".format(region,year,storm)));
-                ncout = Dataset(processedFilePath, 'w');
-                # create dataset and provide dimensions
+                # #### save mask output into a netCDF 
+                # processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_world_ocean_mask.nc".format(region,year,storm)));
+                # ncout = Dataset(processedFilePath, 'w');
+                # # create dataset and provide dimensions
                 
-                ncout.createDimension("lat", wind_lat_dimension);
-                ncout.createDimension("lon", wind_lon_dimension);
+                # ncout.createDimension("lat", wind_lat_dimension);
+                # ncout.createDimension("lon", wind_lon_dimension);
                 
-                #dimension variables
-                var = ncout.createVariable("lat", float, ("lat",));
-                var.units = "lat (degrees North)";
-                var[:] = wind_lat;
+                # #dimension variables
+                # var = ncout.createVariable("lat", float, ("lat",));
+                # var.units = "lat (degrees North)";
+                # var[:] = wind_lat;
                 
-                var = ncout.createVariable("lon", float, ("lon",));
-                var.units = "lon (degrees East)";
-                var[:] = wind_lon;
+                # var = ncout.createVariable("lon", float, ("lon",));
+                # var.units = "lon (degrees East)";
+                # var[:] = wind_lon;
                 
 
-                #data variables
-                var = ncout.createVariable("seamask", float, ("lat", "lon"));
-                var.units = "unitless";
-                var.long_name = "World seas mask nearest interpolation on to  a 0.25X0.25 degree spatial resolution";
-                var[:] = yyy_subset;
+                # #data variables
+                # var = ncout.createVariable("seamask", float, ("lat", "lon"));
+                # var.units = "unitless";
+                # var.long_name = "World seas mask nearest interpolation on to  a 0.25X0.25 degree spatial resolution";
+                # var[:] = yyy_subset;
                 
-                ncout.close();   
+                # ncout.close();   
                 
-                print("mask regridded for Storm = "+storm)
+                # print("mask regridded for Storm = "+storm)
 
                 
                 
