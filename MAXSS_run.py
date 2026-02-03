@@ -338,7 +338,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in ["ALEX"]):
+                if any(name in storm for name in ["ALEX", "BONNIE"]):
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -383,6 +383,11 @@ if __name__ == "__main__":
 
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
                 run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
+                
+                ## TEMPORARY DEBUGGING TEST ##
+                
+                #run_startime= '2017-10-21 12:00'
+                #run_endtime= '2017-10-25 12:00'
           
                 #run_endtime=wind_dates[24].strftime("%Y-%m-%d %H:%M")# # TO ONLY RUN FOR one day
                 
@@ -404,7 +409,7 @@ if __name__ == "__main__":
                 # call custom function which copies file template and makes edits
                 configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=True);
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 

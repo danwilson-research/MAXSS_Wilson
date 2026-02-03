@@ -162,6 +162,7 @@ if __name__ == "__main__":
                     plt.yticks(fontsize=36)
                     plt.legend([name_of_run],fontsize=36)
                     f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
+                    plt.grid()
                     plt.show()
 
                     runcounter=runcounter+1
@@ -223,6 +224,7 @@ if __name__ == "__main__":
                 plt.legend(runs,fontsize=36)
                 plt.plot(dates,np.zeros(len(dates)),"--",color="k", linewidth=3)
                 f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
+                plt.grid()
                 plt.show()
                 fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0})main_run.png".format(storm));
 
@@ -240,6 +242,7 @@ if __name__ == "__main__":
                 plt.xticks(fontsize=36)
                 plt.yticks(fontsize=36)
                 f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
+                plt.grid()
                 plt.show()
                 fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0}main_run_and_ref.png".format(storm));
 
@@ -262,6 +265,7 @@ if __name__ == "__main__":
                 plt.yticks(fontsize=36)
                 plt.legend(runs,fontsize=36)
                 f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
+                plt.grid()
                 plt.show()
                 fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0}.png".format(storm));
 
