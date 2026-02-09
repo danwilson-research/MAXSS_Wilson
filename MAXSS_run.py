@@ -392,59 +392,59 @@ if __name__ == "__main__":
                 #run_endtime=wind_dates[24].strftime("%Y-%m-%d %H:%M")# # TO ONLY RUN FOR one day
                 
 
-                # #### Run flux engine for 'MAXSS run'
-                # run_name="MAXSS_RUN"
-                # # create custom config file for this storm
-                # # call custom function which copies file template and makes edits
-                # configFilePath_MAXSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
-                # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                # runStatus, fe_MAXSS_RUN = run_fluxengine(configFilePath_MAXSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
+                #### Run flux engine for 'MAXSS run'
+                run_name="MAXSS_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_MAXSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_MAXSS_RUN = run_fluxengine(configFilePath_MAXSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 
 
-                # #### Run flux engine for "REF run"
-                # run_name="REF_RUN"
-                # # create custom config file for this storm
-                # # call custom function which copies file template and makes edits
-                # configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
-                # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                # runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=True);
-                # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
+                #### Run flux engine for "REF run"
+                run_name="REF_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=True);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 
                 
-                # #### Run flux engine for "WIND run"
-                # run_name="WIND_RUN"
-                # # create custom config file for this storm
-                # # call custom function which copies file template and makes edits
-                # configFilePath_WIND_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
-                # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                # runStatus, fe_WIND_RUN = run_fluxengine(configFilePath_WIND_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_WIND_RUN,Hourlyfluxdate_WIND_RUN=get_spatially_integrated_flux(fe_WIND_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
+                #### Run flux engine for "WIND run"
+                run_name="WIND_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_WIND_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_WIND_RUN = run_fluxengine(configFilePath_WIND_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_WIND_RUN,Hourlyfluxdate_WIND_RUN=get_spatially_integrated_flux(fe_WIND_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 
 
-                # #### Run flux engine for "SST run"
-                # run_name="SST_RUN"
-                # # create custom config file for this storm
-                # # call custom function which copies file template and makes edits
-                # configFilePath_SST_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
-                # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                # runStatus, fe_SST_RUN = run_fluxengine(configFilePath_SST_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_SST_RUN,Hourlyfluxdate_SST_RUN=get_spatially_integrated_flux(fe_SST_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
+                #### Run flux engine for "SST run"
+                run_name="SST_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_SST_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_SST_RUN = run_fluxengine(configFilePath_SST_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_SST_RUN,Hourlyfluxdate_SST_RUN=get_spatially_integrated_flux(fe_SST_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 
 
-                # #### Run flux engine for "SSS run"
-                # run_name="SSS_RUN"
-                # # create custom config file for this storm
-                # # call custom function which copies file template and makes edits
-                # configFilePath_SSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
-                # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                # runStatus, fe_SSS_RUN = run_fluxengine(configFilePath_SSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_SSS_RUN,Hourlyfluxdate_SSS_RUN=get_spatially_integrated_flux(fe_SSS_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
+                #### Run flux engine for "SSS run"
+                run_name="SSS_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_SSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_SSS_RUN = run_fluxengine(configFilePath_SSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_SSS_RUN,Hourlyfluxdate_SSS_RUN=get_spatially_integrated_flux(fe_SSS_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 
             
                 #### Run flux engine for "PRESSURE run"
@@ -466,7 +466,7 @@ if __name__ == "__main__":
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_PRECIPITATION_RUN = run_fluxengine(configFilePath_PRECIPITATION_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUNN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
+                Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 
 
                 # Add to storm counter when everything is done.
