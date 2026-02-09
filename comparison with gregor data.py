@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 #Define target comparison location and data storage location
-target_lon = -73 #-72 #
-target_lat = 30 #29 # 
+target_lon = -73 #-72
+target_lat = 30 #29
 fluxengine_output_directory = ("E:/MAXSS_working_directory/output/MAXSS_RUN/maxss/storm-atlas/ibtracs/north-atlantic/2017/2017260N12310_AL152017_MARIA")
 
 #Load in data from my fluxengine output
@@ -97,7 +97,7 @@ timeseries_time_fixed = [
     for d in timeseries_time]
 
 # Path to OceanSODA file
-oceansoda_path = "E:/MAXSS_working_directory/fgco2-2010s-8D_25km-OceanSODAETHZv2.2024r01.nc" 
+oceansoda_path = "E:/MAXSS_working_directory/OceanSODAETHZv2/fgco2-2010s-8D_25km-OceanSODAETHZv2.2024r01.nc" 
 oceansoda_var_name = 'fgco2' # variable name for flux
 
 # --- Load OceanSODA Data ---
@@ -158,7 +158,7 @@ plt.plot(timeseries_time_fixed, timeseries_flux,
          label='FluxEngine (Hourly Storm Run)', 
          color='blue', linewidth=1,zorder=2)
 
-# Plot OceanSODA (The Background)
+# Plot OceanSODA 8 day data
 # We plot the full series, but we will limit the X-axis view next
 plt.step(os_dates_fixed, os_flux_gC, 
          label='OceanSODA-ETHZv2 (8-Day Step)', 
@@ -183,6 +183,8 @@ plt.grid(True, linestyle='--', alpha=0.5)
 plt.legend()
 
 plt.show()
+
+
 
 
 
