@@ -1,11 +1,8 @@
 #This script does all the plotting
 
-#pacakges
+#Load required packages
 import os
 from os import path;
-from fluxengine.core.fe_setup_tools import run_fluxengine, get_fluxengine_root;
-from fluxengine.tools.lib_ofluxghg_flux_budgets import run_flux_budgets;
-from fluxengine.tools.lib_compare_net_budgets import read_global_core_budgets, calc_net_budget_percentages;
 from glob import glob
 from pathlib import Path
 import shutil
@@ -173,8 +170,8 @@ if __name__ == "__main__":
                 fig = plt.figure(figsize=(24,15))
                 gs = fig.add_gridspec(1, 1)
                 f_ax1 = fig.add_subplot(gs[0, :])
-                barlist=f_ax1.bar(runs, bar_plot_data[0], color = 'b', width = 0.95)
-                
+                #barlist=f_ax1.bar(runs, bar_plot_data[0], color = 'b', width = 0.95)
+                #Above line commented out to avoid ghost bar plot of last storm data
                 
                 # 2. Create the bar plot
                 barlist = f_ax1.bar(runs, bar_plot_data[storm_counter], color='b', width=0.95)
