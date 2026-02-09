@@ -21,7 +21,7 @@ from pyproj import Geod # use pyproj as it is documented code
 import inspect;
 Month_Fmt = mdates.DateFormatter('%b %d')
 
-runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SST_RUN","SSS_RUN","PRESSURE_RUN"]
+runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SST_RUN","SSS_RUN","PRESSURE_RUN","PRECIPITATION_RUN"]
 #runs=["MAXSS_RUN","REF_RUN","WIND_RUN","PRESSURE_RUN"]
 
 # 1. Define your color map at the top of your script or before the plot
@@ -31,7 +31,8 @@ run_colors = {
     "WIND_RUN": "k",
     "SST_RUN": "r",
     "SSS_RUN": "darkorchid",
-    "PRESSURE_RUN": "orange"
+    "PRESSURE_RUN": "orange",
+    "PRECIPITATION_RUN": "blue"
 }
 
 def get_datetime(secondsSince1970):
@@ -257,6 +258,7 @@ if __name__ == "__main__":
                 plt.plot(dates,Timeseries_plot_data[3],color="r", linewidth=3)
                 plt.plot(dates,Timeseries_plot_data[4],color="darkorchid", linewidth=3)
                 plt.plot(dates,Timeseries_plot_data[5],color="orange", linewidth=3)
+                plt.plot(dates, Timeseries_plot_data[6], color="blue", linewidth=3)
                 plt.plot(dates,np.zeros(len(dates)),"--",color="k", linewidth=3)
                 plt.ylabel("Total flux in region (Tg C hr${^-1}$)",fontsize=36)
                 plt.xlabel("Time",fontsize=36)
