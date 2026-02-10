@@ -828,7 +828,7 @@ if __name__ == "__main__":
                 
                     #### delete all the variables used during import and saving of precip      
                 del newVals, newValsErr ,precip_on_wind_grid,ncout,precip_dates, precip_lat,precip_lon,precip_nc
-                del precip_time,precip_time_slice,precip_timesteps,precip_uncertainty_slice,
+                del precip_time,precip_time_slice,precip_timesteps,precip_uncertainty_slice
                 del processedFilePath,timesteps_precip,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
                 del  precip_regrid_Vals, newCountCount
                 print("precip regridded for Storm = "+storm)                
