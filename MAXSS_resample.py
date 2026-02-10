@@ -115,7 +115,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in ["ALEX", "BONNIE"]):
+                if any(name in storm for name in ["ALEX", "BONNIE", "MARIA"]):
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -744,7 +744,7 @@ if __name__ == "__main__":
                                     
                                 
                 # flux engine expects rain in mm d-1 whereas ERA5 are m every hour
-                unit_conversion_factor_rain= (24/1)*100
+                unit_conversion_factor_rain= (24/1)*1000
                 precip_on_wind_grid=precip_on_wind_grid*unit_conversion_factor_rain
                           
                 #### save precipitation pre storm output into a netCDF 
@@ -775,7 +775,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("precipitation", float, ("time","lat", "lon"));
-                var.units = "m";
+                var.units = "mm day-1";
                 var.long_name = "ERA5 hourly precipitation resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = precip_on_wind_grid;
                 
@@ -1105,7 +1105,7 @@ if __name__ == "__main__":
                                 raise ValueError("CRITICAL ERROR: File contains multiple timesteps.")
 
                             # Extract variables
-                            raw_pco2 = pco2_nc.variables["OBPC"][0, :, :]
+                            raw_pco2 = pco2_nc.variables["OBPC"][0, :, :] #this is the raw pco2 loaded in from Dan F (#Uexp-fnn-u) data
                             raw_air = pco2_nc.variables["V_gas"][0, :, :]
                             raw_sst = pco2_nc.variables["FT1_Kelvin_mean"][0, :, :]
                             
