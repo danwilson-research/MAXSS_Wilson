@@ -13,6 +13,7 @@ This script has been updated in 2026 by Daniel Wilson
 
 #Install required packages
 import os
+import sys
 from os import path, makedirs;
 from glob import glob
 from pathlib import Path
@@ -115,7 +116,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in ["ALEX", "BONNIE", "MARIA"]):
+                if any(name in storm for name in ["BONNIE", "COLIN", "MARIA", "RINA"]):
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -215,25 +216,25 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("windspeed", float, ("time","lat", "lon"));
-                var.units = "ms-1";
+                var.units = "m s-1";
                 var.long_name = "Hourly wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = wind_speed;
                 
                 #data variables
                 var = ncout.createVariable("second_moment_wind", float, ("time","lat", "lon"));
-                var.units = "ms-1 - CHECK";
+                var.units = "m2 s-2";
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment2;
                 
                 #data variables
                 var = ncout.createVariable("third_moment_wind", float, ("time","lat", "lon"));
-                var.units = "ms-1 - CHECK ";
+                var.units = "m3 s-3";
                 var.long_name = "Third moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment3;
                 
                 var = ncout.createVariable("thirdseven_moment_wind", float, ("time","lat", "lon"));
-                var.units = "ms-1 - CHECK";
-                var.long_name = "3.7 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
+                var.units = "m3.742 s-3.742";
+                var.long_name = "3.742 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment3point7;
                 ncout.close();  
                 
@@ -262,13 +263,11 @@ if __name__ == "__main__":
 
 
                 #### save wind pre storm output into a netCDF 
-                
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
                 #### create dataset and provide dimensions
-                
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -289,25 +288,25 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("windspeed", float, ("time","lat", "lon"));
-                var.units = "ms-1";
+                var.units = "m s-1";
                 var.long_name = "Pre storm (15 days) mean of hourly wind speed from MAXSS on a 0.25X0.25 degree spatial at a hourly temporal resolution";
                 var[:] = wind_speed_prestormref;
                 
                 #data variables
                 var = ncout.createVariable("second_moment_wind", float, ("time","lat", "lon"));
-                var.units = "ms-1 - CHECK";
+                var.units = "m2 s-2";
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = second_moment_prestormref;
                 
                 #data variables
                 var = ncout.createVariable("third_moment_wind", float, ("time","lat", "lon"));
-                var.units = "ms-1 - CHECK ";
+                var.units = "m3 s-3";
                 var.long_name = "Third moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = third_moment_prestormref;
                 
                 var = ncout.createVariable("thirdseven_moment_wind", float, ("time","lat", "lon"));
-                var.units = "ms-1 - CHECK";
-                var.long_name = "3.7 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
+                var.units = "m3.742 s-3.742";
+                var.long_name = "3.742 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = thirdseven_moment_prestormref;
                 ncout.close();   
                 
@@ -316,8 +315,7 @@ if __name__ == "__main__":
                 del wind_prestormref_second_moment,wind_prestormref_third_moment,wind_prestormref_thirdseven_moment
                 del wind_prestormref
                 print("Wind regridded for Storm = "+storm)
-
-
+                
                 
                 #### MAXSS ESACCI SST data
                 #### load data
