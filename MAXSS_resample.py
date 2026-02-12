@@ -478,9 +478,6 @@ if __name__ == "__main__":
                 print("SST regridded for Storm = "+storm)
           
                     
-
-
-                            
                 #### MAXSS ESACCI SSS data
                     #### load data                
                 sss_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ESACCI-SEASURFACESALINITY-L4-SSS-MERGED_OI_7DAY_RUNNINGMEAN_DAILY_25km.nc".format(region,year,storm,region_id,storm_id)));
@@ -671,88 +668,92 @@ if __name__ == "__main__":
                 
                   
                 #### MAXSS ERA5 precipitation 
-                
+                #Note this resample code assumes precipitation is on the same grid spatial and temporal grid as the wind
                 #### load data
-                precip_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_Precipitation.nc".format(region,year,storm,region_id,storm_id)));
-                #precip = precip_nc.variables['__eo_tp'][:]#total precipiation
-                precip_lat = precip_nc.variables['lat'][:]
-                precip_lon = precip_nc.variables['lon'][:]
-                precip_time = precip_nc.variables['time'][:]
+                precip_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_Precipitation.nc".format(region,year,storm,region_id,storm_id)))
                 
-                #### resample precip to wind grid
-                iCoordMeshes = None; #Initially this is None but will be calculated exactly once. It's a long calculation so doesn't want to be repeated.
-                outputRes = 0.25;
+                # Load data into memory
+                p_lat = precip_nc.variables['lat'][:]
+                p_lon = precip_nc.variables['lon'][:]
+                p_time = precip_nc.variables['time'][:]
                 
-                #### Calculate binning information
-                #Only do this once because it's computationally expensive but the same for all time steps
-                if iCoordMeshes is None: 
-                    CCILats = precip_nc.variables['lat'][:]
-                    CCILons = precip_nc.variables['lon'][:]
-                    #print("Calculating grid cell mapping...");
-                    iCoordMeshes = np.full((wind_lat_dimension,wind_lon_dimension), None, dtype=object);
+                # Load data and immediately replace mask with NaN to avoid issues with conversion
+                p_data_raw = precip_nc.variables['__eo_tp'][:] # Shape: (time, lat, lon)
+                p_data = np.ma.filled(p_data_raw, fill_value=np.nan)
+                
+                #### 1. Handle Latitude Orientation
+                # If precip lat is [20, 19.75, 19.5] (descending) and wind lat is [19.5, 19.75, 20] (ascending)
+                if p_lat[0] > p_lat[-1]:
+                    p_lat = p_lat[::-1]
+                    p_data = p_data[:, ::-1, :]
                     
+                # 2. Check Shape/Dimensions 
+                # Compare the lengths of the latitude and longitude arrays
+                if (wind_lat.shape != p_lat.shape) or (wind_lon.shape != p_lon.shape):
+                    print(f"\n!!! FATAL ERROR: Grid Dimension Mismatch for storm {storm} !!!")
+                    print(f"  > Wind Grid Shape:   {wind_lat.shape} lat x {wind_lon.shape} lon")
+                    print(f"  > Precip Grid Shape: {p_lat.shape} lat x {p_lon.shape} lon")
+                    print("  > ACTION: Stopping script. You must regrid the inputs to match.")
+                    sys.exit(1) # stops the script immediately
+            
+                # Check Coordinate Values
+                # Use np.allclose to allow for tiny floating-point differences (e.g. 19.0000001 vs 19.0)
+                # atol=1e-4 roughly equals 11 meters, which is strict enough for 0.25 deg grids
+                lat_match = np.allclose(wind_lat, p_lat, atol=1e-4)
+                lon_match = np.allclose(wind_lon, p_lon, atol=1e-4)
+            
+                if not lat_match or not lon_match:
+                    print(f"\n!!! FATAL ERROR: Grid Coordinate Mismatch for storm {storm} !!!")
+                    
+                    if not lat_match:
+                        print("  > Latitude arrays do not match.")
+                        print(f"    Wind Lat Start/End:   {wind_lat[0]:.4f} / {wind_lat[-1]:.4f}")
+                        print(f"    Precip Lat Start/End: {p_lat[0]:.4f} / {p_lat[-1]:.4f}")
+                        
+                        # Helpful Hint: Check if one is just flipped (Ascending vs Descending)
+                        if np.allclose(wind_lat, p_lat[::-1], atol=1e-4):
+                            print("    -> DIAGNOSIS: Latitudes are inverted (e.g., 90->-90 vs -90->90).")
+                            print("    -> FIX: Enable the latitude flip code block in your script.")
+            
+                    if not lon_match:
+                        print("  > Longitude arrays do not match.")
+                        print(f"    Wind Lon Start/End:   {wind_lon[0]:.4f} / {wind_lon[-1]:.4f}")
+                        print(f"    Precip Lon Start/End: {p_lon[0]:.4f} / {p_lon[-1]:.4f}")
+                        
+                        # Helpful Hint: Check for 0-360 vs -180-180 convention
+                        if np.any(p_lon > 180) and np.all(wind_lon <= 180):
+                            print("    -> DIAGNOSIS: Longitude conventions differ (0-360 vs -180-180).")
+                    
+                    print("  > ACTION: Stopping script to prevent physical errors.")
+                    sys.exit(1)
+            
+                print(f"SUCCESS: Grids for {storm} are aligned.")
                 
-                    for ilat, lat in enumerate(np.arange(min_lat,max_lat , outputRes)):
-                        #print("Grid cell mapping for latitude", lat);
-                        for ilon, lon in enumerate(np.arange(min_lon,max_lon, outputRes)):
-                            wlat = np.where((CCILats >= lat) & (CCILats < (lat+outputRes)));
-                            wlon = np.where((CCILons >= lon) & (CCILons< (lon+outputRes)));
-                            
-                            if (len(wlat[0]) > 0) & (len(wlon[0]) > 0):
-                                iCoordMeshes[ilat, ilon] = np.meshgrid(wlat[0], wlon[0]);
-                                    
-                # loop through timesteps 
-                timesteps_precip=len(precip_time)
-                del ilat, ilon, CCILats,CCILons, lat , lon
-                
-                #### Store data for each day of the month
-                precip_regrid_Vals = np.empty((timesteps_precip, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                # precip_regrid_ValsErr = np.empty((timesteps_precip, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                # precip_regrid_ValsCounts = np.empty((timesteps_precip, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                               
-                for precip_timesteps in range(0, timesteps_precip): 
-                    #print(precip_timesteps)                               
-                    precip_time_slice=precip_nc.variables['__eo_tp'][precip_timesteps,:,:]   
-                    # no uncertainty data but is needed for function so just use the precipitation instead 
-                    # and dont use uncertainty.                       
-                    precip_uncertainty_slice=precip_nc.variables['__eo_tp'][precip_timesteps,:,:]                         
-                    newVals, newCountCount, newValsErr = process_slice(precip_time_slice,precip_uncertainty_slice);
-                
-                    precip_regrid_Vals[precip_timesteps,:,:] = newVals;
-                    # precip_regrid_ValsErr[precip_timesteps,:,:] = newValsErr;
-                    # precip_regrid_ValsCounts[precip_timesteps,:,:] = newCountCount;
-                
-                #plt.pcolor(precip_regrid_Vals[1,:,:])
-                             
-                precip_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                
-                #### get the data of each timestep in wind data
-                precip_time = precip_nc.variables['time'][:]
-                precip_dates = num2date(precip_time, precip_nc.variables['time'].units)
-                
-                #### loop through the wind timestamps, extract the month and use that to pick which precip data to use.
-                for wind_step in range(0, wind_time_dimension):
-                
-                    #now find the index of the CLOSEST value and use that
-                    abs_deltas_from_target_date = np.absolute(precip_dates - wind_dates[wind_step])
-                    index_of_min_delta_from_target_date = np.argmin(abs_deltas_from_target_date)
-                    #closest_date = precip_dates[index_of_min_delta_from_target_date]
+                #### 3. Vectorized Unit Conversion
+                # ERA5 is 'm' per hour, FluxEngine needs 'mm/day'. 1m = 1000mm. Since it's hourly, * 24 for daily rate.
+                unit_conversion = 1000 * 24
+                p_data = p_data * unit_conversion
 
-                    precip_on_wind_grid[wind_step,:,:]=precip_regrid_Vals[index_of_min_delta_from_target_date,:,:]
-                                    
-                                
-                # flux engine expects rain in mm d-1 whereas ERA5 are m every hour
-                unit_conversion_factor_rain= (24/1)*1000
-                precip_on_wind_grid=precip_on_wind_grid*unit_conversion_factor_rain
+                #### 4. Temporal Alignment (Vectorized)
+                precip_dates = num2date(p_time, precip_nc.variables['time'].units)
+                precip_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=np.float32)
+                
+                for wind_step in range(wind_time_dimension):
+                    # Find closest time index
+                    abs_deltas = np.absolute(precip_dates - wind_dates[wind_step])
+                    idx = np.argmin(abs_deltas)
+                    
+                    # Check if spatial dimensions match exactly. If so, just copy.
+                    # If not, you can use simple slicing or scipy.interpolate.interp2d
+                    precip_on_wind_grid[wind_step, :, :] = p_data[idx, :, :]
+                
+                print(f"Precipitation processed via vectorization for {storm}")
                           
-                #### save precipitation pre storm output into a netCDF 
-                
+                ####  5. Save precipitation pre storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc".format(region,year,storm)));
-
                 ncout = Dataset(processedFilePath, 'w');
                     
                 #### create dataset and provide dimensions
-                
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -774,14 +775,12 @@ if __name__ == "__main__":
                 #data variables
                 var = ncout.createVariable("precipitation", float, ("time","lat", "lon"));
                 var.units = "mm day-1";
-                var.long_name = "ERA5 hourly precipitation resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
                 var[:] = precip_on_wind_grid;
                 
                 ncout.close();   
                 
-                
                 #### MAXSS ESACCI precipitation data pre_storm_reference
-
                 #pre storm is first 15 days,so 15 days * hourly resolution
                 precip_prestormref=np.nanmean(precip_on_wind_grid[0:(15*24):1,:,:],axis =(0))
                 #create empty grid
@@ -790,7 +789,7 @@ if __name__ == "__main__":
                 for wind_step in range(0, wind_time_dimension):
                     precip_on_wind_grid_prestormref[wind_step,:,:]=precip_prestormref[:,:]
                 
-
+                
                 #### save precip output into a netCDF 
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc".format(region,year,storm)));
@@ -818,18 +817,37 @@ if __name__ == "__main__":
                 #data variables
                 var = ncout.createVariable("precipitation", float, ("time","lat", "lon"));
                 var.units = "mm d-1";
-                var.long_name = "Pre storm (15 days) mean of ERA5 hourly precipitation resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "Pre storm (15 days) mean of ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
                 var[:] = precip_on_wind_grid_prestormref;
                 
                 ncout.close();   
                 
+                #Clean up and close datasets and large arrays
+                # 1. Close the input NetCDF file (Crucial!)
+                if 'precip_nc' in locals() and precip_nc.isopen():
+                    precip_nc.close()
+
+                # 2. Delete large 3D Data Arrays (The biggest memory hogs)
+                del p_data_raw, p_data
+                del precip_on_wind_grid
+                del precip_on_wind_grid_prestormref
                 
-                    #### delete all the variables used during import and saving of precip      
-                del newVals, newValsErr ,precip_on_wind_grid,ncout,precip_dates, precip_lat,precip_lon,precip_nc
-                del precip_time,precip_time_slice,precip_timesteps,precip_uncertainty_slice
-                del processedFilePath,timesteps_precip,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
-                del  precip_regrid_Vals, newCountCount
-                print("precip regridded for Storm = "+storm)                
+                # 3. Delete calculation intermediates
+                del precip_prestormref
+                del idx, abs_deltas  # Created inside the loop
+                
+                # 4. Delete coordinate/time arrays created for precip
+                del p_lat, p_lon, p_time, precip_dates
+                
+                # 5. Delete File Handlers/Paths
+                del ncout, precip_nc, processedFilePath, var
+
+                # 6. Force Garbage Collection (Optional but recommended for large loops)
+                import gc
+                gc.collect()
+
+                #Print to console that precipitation regridded.
+                print("precip regridded for Storm = "+storm)             
                 
                                 
                 #### MAXSS ERA5 pressure data
