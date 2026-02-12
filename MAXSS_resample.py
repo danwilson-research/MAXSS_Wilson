@@ -13,29 +13,20 @@ This script has been updated in 2026 by Daniel Wilson
 
 #Install required packages
 import os
+from os import path
 import sys
-from os import path, makedirs;
+import gc
+import warnings
 from glob import glob
-from pathlib import Path
-import shutil;
 import netCDF4 as nc
-from netCDF4 import date2num, num2date, Dataset
-import argparse;
 from string import Template;
 import numpy as np;
-import urllib.request as request;
-from contextlib import closing;
-import ssl;
-import urllib;
 import calendar;
-from datetime import datetime, timedelta;
-import tarfile;
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-import itertools
 import pandas as pd
 from scipy.interpolate import griddata
+from netCDF4 import num2date, Dataset
 from scipy.spatial import cKDTree
+import itertools
 
 
 def process_slice(valData, errData, outputRes=0.25):
@@ -86,8 +77,8 @@ if __name__ == "__main__":
         #get a list of the years
         year_list = []
         for entry_name in os.listdir(region_directory):
-            entry_path = os.path.join(region_directory, entry_name)
-            if os.path.isdir(entry_path):
+            entry_path = path.join(region_directory, entry_name)
+            if path.isdir(entry_path):
                 year_list.append(entry_name)
         #get a list of the paths for each year folder
         year_directory_list=glob(region_directory+"/*/", recursive = True)
@@ -101,8 +92,8 @@ if __name__ == "__main__":
             #get a list of the storms
             storm_list = []
             for entry_name in os.listdir(year_directory_list[year_counter]):
-                entry_path = os.path.join(year_directory_list[year_counter], entry_name)
-                if os.path.isdir(entry_path):
+                entry_path = path.join(year_directory_list[year_counter], entry_name)
+                if path.isdir(entry_path):
                     storm_list.append(entry_name)
             #get a list of the paths for each year folder
             storm_directory_list=glob(year_directory_list[year_counter]+"/*/", recursive = True)
@@ -843,7 +834,6 @@ if __name__ == "__main__":
                 del ncout, precip_nc, processedFilePath, var
 
                 # 6. Force Garbage Collection (Optional but recommended for large loops)
-                import gc
                 gc.collect()
 
                 #Print to console that precipitation regridded.
@@ -859,75 +849,51 @@ if __name__ == "__main__":
                 pressure_lon = pressure_nc.variables['lon'][:]
                 pressure_time = pressure_nc.variables['time'][:]
                 
-                #### resample pressure to wind grid
-                iCoordMeshes = None; #Initially this is None but will be calculated exactly once. It's a long calculation so doesn't want to be repeated.
-                outputRes = 0.25;
-                #### Calculate binning information
-                #Only do this once because it's computationally expensive but the same for all time steps
-                if iCoordMeshes is None: 
-                    CCILats = pressure_nc.variables['lat'][:]
-                    CCILons = pressure_nc.variables['lon'][:]
-                    #print("Calculating grid cell mapping...");
-                    iCoordMeshes = np.full((wind_lat_dimension,wind_lon_dimension), None, dtype=object);
+                # Load pressure variable (__eo_sp)
+                # Use np.ma.filled to convert masked values to NaNs immediately
+                pressure_data_raw = pressure_nc.variables['__eo_sp'][:] 
+                pressure_data = np.ma.filled(pressure_data_raw, fill_value=np.nan)
+                
+                #### Grid Safety Check (Crucial when skipping regridding)
+                # Ensure latitude orientation matches wind (e.g., both descending or both ascending)
+                if pressure_lat[0] > pressure_lat[-1] and wind_lat[0] < wind_lat[-1]:
+                     pressure_lat = pressure_lat[::-1]
+                     pressure_data = pressure_data[:, ::-1, :]
+                elif pressure_lat[0] < pressure_lat[-1] and wind_lat[0] > wind_lat[-1]:
+                     pressure_lat = pressure_lat[::-1]
+                     pressure_data = pressure_data[:, ::-1, :]
+                
+                # Verify shapes match
+                if (wind_lat.shape != pressure_lat.shape) or (wind_lon.shape != pressure_lon.shape):
+                    print(f"\n!!! FATAL ERROR: Pressure Grid Dimension Mismatch for {storm} !!!")
+                    print(f"  Wind: {wind_lat.shape}, Pressure: {pressure_lat.shape}")
+                    sys.exit(1)
+                
+                # Verify coordinates match (allow for tiny float differences)
+                if not np.allclose(wind_lat, pressure_lat, atol=1e-4) or not np.allclose(wind_lon, pressure_lon, atol=1e-4):
+                    print(f"\n!!! FATAL ERROR: Pressure Grid Coordinates do not match Wind Grid for {storm} !!!")
+                    sys.exit(1)
                     
-                
-                    for ilat, lat in enumerate(np.arange(min_lat,max_lat , outputRes)):
-                        #print("Grid cell mapping for latitude", lat);
-                        for ilon, lon in enumerate(np.arange(min_lon,max_lon, outputRes)):
-                            wlat = np.where((CCILats >= lat) & (CCILats < (lat+outputRes)));
-                            wlon = np.where((CCILons >= lon) & (CCILons< (lon+outputRes)));
-                            
-                            if (len(wlat[0]) > 0) & (len(wlon[0]) > 0):
-                                iCoordMeshes[ilat, ilon] = np.meshgrid(wlat[0], wlon[0]);
-                                    
-                                    # loop through timesteps 
-                timesteps_pressure=len(pressure_time)
-                del ilat, ilon, CCILats,CCILons, lat , lon
-                
-                #### Store data for each day of the month
-                pressure_regrid_Vals = np.empty((timesteps_pressure, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                # pressure_regrid_ValsErr = np.empty((timesteps_pressure, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                # pressure_regrid_ValsCounts = np.empty((timesteps_pressure, wind_lat_dimension,wind_lon_dimension), dtype=float);
-                               
-                for pressure_timesteps in range(0, timesteps_pressure): 
-                    #print(pressure_timesteps)                               
-                    pressure_time_slice=pressure_nc.variables['__eo_sp'][pressure_timesteps,:,:]   
-                    # no uncertainty data but is needed for function so just use the pressure instead 
-                    # and dont use uncertainty.                       
-                    pressure_uncertainty_slice=pressure_nc.variables['__eo_sp'][pressure_timesteps,:,:]                         
-                    newVals, newCountCount, newValsErr = process_slice(pressure_time_slice,pressure_uncertainty_slice);
-                
-                    pressure_regrid_Vals[pressure_timesteps,:,:] = newVals;
-                    # pressure_regrid_ValsErr[pressure_timesteps,:,:] = newValsErr;
-                    # pressure_regrid_ValsCounts[pressure_timesteps,:,:] = newCountCount;
-                
-                #plt.pcolor(pressure_regrid_Vals[1,:,:])
-                             
-                pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                
-                #### get the data of each timestep in wind data
-                pressure_time = pressure_nc.variables['time'][:]
+                #### Vectorized Time Alignment
+                # Instead of looping, we align time indices efficiently
                 pressure_dates = num2date(pressure_time, pressure_nc.variables['time'].units)
-                
-                #### loop through the wind timestamps, extract the month and use that to pick which pressure data to use.
-                for wind_step in range(0, wind_time_dimension):
-                
-                    #now find the index of the CLOSEST value and use that
-                    abs_deltas_from_target_date = np.absolute(pressure_dates - wind_dates[wind_step])
-                    index_of_min_delta_from_target_date = np.argmin(abs_deltas_from_target_date)
-                    #closest_date = pressure_dates[index_of_min_delta_from_target_date]
+                pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=np.float32)
 
-                    pressure_on_wind_grid[wind_step,:,:]=pressure_regrid_Vals[index_of_min_delta_from_target_date,:,:]
-                                    
+                # Vectorized search for closest time index
+                # (This is much faster than the nested loop method)
+                for wind_step in range(wind_time_dimension):
+                    # Find index of pressure time closest to current wind time
+                    # If the time axes are identical, this simply maps 0->0, 1->1, etc.
+                    abs_deltas = np.absolute(pressure_dates - wind_dates[wind_step])
+                    idx = np.argmin(abs_deltas)
+                    pressure_on_wind_grid[wind_step, :, :] = pressure_data[idx, :, :]
                                                 
-                #### save pressureitation pre storm output into a netCDF 
-                
+                #### save pressure pre storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
                 #### create dataset and provide dimensions
-                
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -948,7 +914,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"));
-                var.units = "pascals";
+                var.units = "Pa";
                 var.long_name = "ERA5 hourly sea level pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = pressure_on_wind_grid;
                 
@@ -957,7 +923,10 @@ if __name__ == "__main__":
                 #### MAXSS ERA5 pressure data pre storm_reference
                 
                 #pre storm is first 15 days,so 15 days * hourly resolution
-                pressure_prestormref=np.nanmean(pressure_on_wind_grid[0:(15*24):1,:,:],axis =(0))
+                #Suppress the "Mean of empty slice" for this calculation as some cells legitimatly always land
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    pressure_prestormref = np.nanmean(pressure_on_wind_grid[0:(15*24):1,:,:], axis=0)
                 #create empty grid
                 pressure_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 #set all the values equal to the pre storm mean values
@@ -989,21 +958,24 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"));
-                var.units = "pascals";
+                var.units = "Pa";
                 var.long_name = "Pre storm (15 days) mean of ERA5 hourly pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = pressure_on_wind_grid_prestormref;
                 
                 ncout.close();   
                 
+                #### Cleanup
+                if 'pressure_nc' in locals() and pressure_nc.isopen():
+                    pressure_nc.close()
                 
-                #### delete all the variables used during import and saving of pressure      
-                del newVals, newValsErr ,pressure_on_wind_grid,ncout,pressure_dates, pressure_lat,pressure_lon,pressure_nc
-                del pressure_time,pressure_time_slice,pressure_timesteps,pressure_uncertainty_slice,
-                del processedFilePath,timesteps_pressure,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
-                del  pressure_regrid_Vals, newCountCount
-                print("pressure regridded for Storm = "+storm)    
+                del pressure_data_raw, pressure_data, pressure_on_wind_grid
+                del pressure_on_wind_grid_prestormref
+                del pressure_lat, pressure_lon, pressure_time, pressure_dates
                 
+                gc.collect()
                 
+                print("Pressure processed for Storm = "+storm)
+
                 #### MAXSS Land fraction 
                 
                 #### create dataset and provide dimensions
