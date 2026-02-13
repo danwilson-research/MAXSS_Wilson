@@ -101,6 +101,12 @@ if __name__ == "__main__":
             storm_counter=0
         #### Loop through the storms for each year in the MAXSS storm dataset 
             for storm in MAXSS_storms:
+                
+                ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
+                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]):
+                    print(f"Skipping storm: {storm}")
+                    storm_counter += 1 # Important: increment the counter before skipping
+                    continue
 
                 #directory for storm being processes
                 storm_dir=storm_directory_list[storm_counter]

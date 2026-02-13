@@ -107,7 +107,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in ["ALEX", "BONNIE", "COLIN", "MARIA" ]):
+                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]):
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -207,27 +207,27 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("windspeed", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m s-1";
                 var.long_name = "Hourly wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = wind_speed;
                 
                 #data variables
                 var = ncout.createVariable("second_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m2 s-2";
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment2;
                 
                 #data variables
                 var = ncout.createVariable("third_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m3 s-3";
                 var.long_name = "Third moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment3;
                 
                 var = ncout.createVariable("thirdseven_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m3.742 s-3.742";
                 var.long_name = "3.742 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment3point7;
@@ -281,27 +281,27 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("windspeed", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m s-1";
                 var.long_name = "Pre storm (15 days) mean of hourly wind speed from MAXSS on a 0.25X0.25 degree spatial at a hourly temporal resolution";
                 var[:] = wind_speed_prestormref;
                 
                 #data variables
                 var = ncout.createVariable("second_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m2 s-2";
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = second_moment_prestormref;
                 
                 #data variables
                 var = ncout.createVariable("third_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m3 s-3";
                 var.long_name = "Third moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = third_moment_prestormref;
                 
                 var = ncout.createVariable("thirdseven_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m3.742 s-3.742";
                 var.long_name = "3.742 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = thirdseven_moment_prestormref;
@@ -408,7 +408,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sst", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "Degrees Kelvin";
                 var.long_name = "Daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolutionn";
                 var[:] = sst_on_wind_grid;
@@ -461,7 +461,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sst", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "Degrees Kelvin";
                 var.long_name = "Pre storm (15 days) mean of daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sst_on_wind_grid_prestormref;
@@ -608,7 +608,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sss", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "PSU";
                 var.long_name = "Weekly ESACCI sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sss_on_wind_grid;
@@ -651,7 +651,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sss", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "PSU";
                 var.long_name = "Pre storm (15 days) mean of ESACCI weekly sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sss_on_wind_grid_prestormref;
@@ -775,7 +775,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("precipitation", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "mm day-1";
                 var.long_name = "ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
                 var[:] = precip_on_wind_grid;
@@ -818,7 +818,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("precipitation", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "mm d-1";
                 var.long_name = "Pre storm (15 days) mean of ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
                 var[:] = precip_on_wind_grid_prestormref;
@@ -926,7 +926,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "Pa";
                 var.long_name = "ERA5 hourly sea level pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = pressure_on_wind_grid;
@@ -971,7 +971,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "Pa";
                 var.long_name = "Pre storm (15 days) mean of ERA5 hourly pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = pressure_on_wind_grid_prestormref;
@@ -1015,7 +1015,7 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("land proportion", float, ("latitude", "longitude"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(wind_lat_dimension, wind_lon_dimension));
                 var.units = "Percentage";
                 var.long_name = "Fraction of grid cell as land (%)";
                 var[:] = wind_land_fraction;
@@ -1241,21 +1241,21 @@ if __name__ == "__main__":
                 
                 #data variables
                 var = ncout.createVariable("pCO2water_mean", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "microatm";
                 var.long_name = "Monthly pco2 resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = pco2_on_wind_grid;
                 
                 #data variables
                 var = ncout.createVariable("V_gas", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "micromol mol-1";
                 var.long_name = "Concentration CO2 in dry air (ppm) or dry molecular fraction of CO2 in the atmosphere (umol mol-1)";
                 var[:] = conc_pco2_air_on_wind_grid;
                 
                 #data variables
                 var = ncout.createVariable("reynolds_temperature_mean", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=4, shuffle=True);
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "kelvin";
                 var.long_name = "Monthly Sea surface skin temperature resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = reynolds_co2_on_wind_grid;
