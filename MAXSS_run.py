@@ -240,7 +240,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, wind_
     #Integrated flux in Tg every hour
     Hourly_regional_flux_Tg=arr2/unit_factor
     #reshape time array
-    time_arr2=time_arr.reshape(arr_size[0]*arr_size[1],1)
+    time_arr2=time_arr.flatten()
     time_for_plotting=get_datetimes(time_arr2)
 
     #total flux in region across all timesteps
