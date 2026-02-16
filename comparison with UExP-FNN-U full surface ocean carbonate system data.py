@@ -177,11 +177,14 @@ print(f"Percentage of Area LOST:      {(lost_area / total_fe_area * 100).values:
 
 ###############################################################################
 
+
 #Get a list of all the fluxengine output files to loop through
 fluxengine_files = os.listdir(fluxengine_dir)
 
+print(f"Starting hourly integration for {len(fluxengine_files)} files...")
+
 # Create an empty list to store daily results
-daily_flux_list = []
+hourly_fluxengine_flux = []
 
 #Now begin the process of looping through each timestep
 for file in fluxengine_files:
@@ -196,3 +199,25 @@ for file in fluxengine_files:
         # 2. Apply the Common Mask
         # Sets all pixels outside common area to NaN
         fe_masked = fe_flux.where(common_mask)
+        
+        # 3. Spatially sum Flux (Result is g C m-2 day-1 * km^2) 
+        spatial_integrated_flux = (fe_masked * pixel_area_map).sum(dim=['latitude', 'longitude'])
+        
+        # 2. Unit conversion to Tg C hr-1
+        # g -> Tg is 1e-12
+        # km2 -> m2 is 1e6
+        # day-1 -> hr-1 is / 24
+        hourly_Tg = (spatial_integrated_flux * 1e6 * 1e-12) / 24.0
+        
+        #Append to list
+        hourly_fluxengine_flux.append(hourly_Tg)
+
+# Combine into one timeline
+total_fluxengine_hourly_Tg = xr.concat(hourly_fluxengine_flux, dim='time')
+
+plt.plot(total_fluxengine_hourly_Tg)
+
+### now move on to DOING SAME CALCULATAION FOR THE uep_fnn data
+
+#CUT OFF END OF DATA AFTER END OF MODEL RUN
+#DONT FORGET INTEGRATNIG SEA ICE/ PROPORTION ICE IMPACT
