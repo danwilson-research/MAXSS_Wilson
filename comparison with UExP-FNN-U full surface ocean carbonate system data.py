@@ -12,9 +12,10 @@ Created on Fri Feb 13 12:09:59 2026
 
 #Import required packages
 import xarray as xr
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.dates as mdates
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import os
@@ -176,7 +177,7 @@ print("-" * 30)
 print(f"Percentage of Area LOST:      {(lost_area / total_fe_area * 100).values:.2f}%")
 
 ###############################################################################
-
+##Plot the hourly flux data from the 'common area'
 
 #Get a list of all the fluxengine output files to loop through
 fluxengine_files = os.listdir(fluxengine_dir)
@@ -200,8 +201,9 @@ for file in fluxengine_files:
         # Sets all pixels outside common area to NaN
         fe_masked = fe_flux.where(common_mask)
         
-        # 3. Spatially sum Flux (Result is g C m-2 day-1 * km^2) 
-        spatial_integrated_flux = (fe_masked * pixel_area_map).sum(dim=['latitude', 'longitude'])
+        # 3. Spatially sum Flux (Result is g C m-2 day-1 * km^2) if less than 1 valid non-nan then value = nan 
+            # This helps ID end of FluxEngine model run
+        spatial_integrated_flux = (fe_masked * pixel_area_map).sum(dim=['latitude', 'longitude'], min_count=1)
         
         # 2. Unit conversion to Tg C hr-1
         # g -> Tg is 1e-12
@@ -213,11 +215,141 @@ for file in fluxengine_files:
         hourly_fluxengine_flux.append(hourly_Tg)
 
 # Combine into one timeline
-total_fluxengine_hourly_Tg = xr.concat(hourly_fluxengine_flux, dim='time')
+fluxengine_hourly_Tg = xr.concat(hourly_fluxengine_flux, dim='time')
 
-plt.plot(total_fluxengine_hourly_Tg)
+#Trim data to remove timesteps where all data = NaN as after end of model run or at the start
 
-### now move on to DOING SAME CALCULATAION FOR THE uep_fnn data
+#Identify valid data (where Flux is NOT NaN)
+valid_mask = fluxengine_hourly_Tg.notnull()
 
-#CUT OFF END OF DATA AFTER END OF MODEL RUN
+if valid_mask.any():
+    # Get all times that have valid data
+    valid_times = fluxengine_hourly_Tg.time[valid_mask]
+    
+    # 2. Find the FIRST and LAST valid timestamps
+    first_valid_time = valid_times.min().values
+    last_valid_time = valid_times.max().values
+    
+    print('trimming FluxEngine data to model runtime')
+    print(f"  Start: {str(first_valid_time)[:16]}")
+    print(f"  End:   {str(last_valid_time)[:16]}")
+
+    # 3. Slice BOTH datasets to this exact window
+    # This removes leading NaNs AND trailing NaNs
+    fluxengine_hourly_Tg_trimmed = fluxengine_hourly_Tg.sel(time=slice(first_valid_time, last_valid_time))
+    
+
+else:
+    print("ERROR: No valid data found in the entire time series.")
+    fluxengine_hourly_Tg_trimmed = fluxengine_hourly_Tg
+    
+plt.plot(fluxengine_hourly_Tg_trimmed)
+plt.title('FluxEngine hourly flux')
+plt.xlabel('timestep')
+plt.ylabel('Hourly Flux (Tg C hr-1)')
+plt.show()
+
+###############################################################################
+### Now move on to calculating hourly flux for UExP 
+
+# 1. Regrid the FULL UExP flux time series to the 0.25deg regional grid
+# Using nearest neighbor to match the "blocky" style of the mask
+UExP_regridded_full = UExP_FNN_raw.flux.transpose("time", "latitude", "longitude").interp_like(
+    fluxengine_example_flux, method="nearest")
+
+# 2. Spatially integrate the FULL UExP timeline first (keep the units consistent)
+UExP_masked_full = UExP_regridded_full.where(common_mask)
+UExP_spatial_sum = (UExP_masked_full * pixel_area_map).sum(dim=['latitude', 'longitude'])
+
+# Convert UExP (g C m-2 day-1) to (Tg C hr-1)
+UExP_Tg_hourly_rate = (UExP_spatial_sum * 1e6 * 1e-12) / 24.0
+
+# 3. Create an EXPLICIT lookup dictionary: {(year, month): value}
+# This ensures we only ever pull June 2010 for a June 2010 hour.
+uexp_lookup = {
+    (int(t.dt.year), int(t.dt.month)): val.item() 
+    for t, val in zip(UExP_Tg_hourly_rate.time, UExP_Tg_hourly_rate)}
+
+# 4. Broadcast the baseline to match your storm's hourly timeline
+# We use a list comprehension to look up the (year, month) for every hour in TC Alex
+uexp_baseline_values = []
+for t in fluxengine_hourly_Tg_trimmed.time:
+    key = (int(t.dt.year), int(t.dt.month))
+    # This will pull the exact matching month or crash if the month is missing (safer!)
+    uexp_baseline_values.append(uexp_lookup[key])
+
+# 5. Turn it back into an Xarray DataArray 
+uexp_baseline_hourly = xr.DataArray(
+    uexp_baseline_values, 
+    coords={'time': fluxengine_hourly_Tg_trimmed.time}, 
+    dims=['time'])
+
+###############################################################################
+## Plot the analysis
+
+# Calculate Total Mass (Sum of hourly rates) ---
+# Since units are Tg/hr, the sum of all hours gives the total Tg for the period
+fe_total_mass = fluxengine_hourly_Tg_trimmed.sum().values
+uexp_total_mass = uexp_baseline_hourly.sum().values
+net_difference = fe_total_mass - uexp_total_mass
+
+# Create the Plot 
+fig, ax = plt.subplots(figsize=(12, 6))
+
+# Add the Zero Line (Black Dashed)
+# zorder=1 ensures it stays behind the data lines
+ax.axhline(0, color='black', linestyle='--', linewidth=1, alpha=0.8, zorder=1)
+
+# Plot UExP Baseline
+ax.plot(uexp_baseline_hourly.time, uexp_baseline_hourly, 
+        label='UExP Baseline (Monthly Mean)', color='red', linestyle='--', linewidth=1.5)
+
+# Plot FluxEngine
+ax.plot(fluxengine_hourly_Tg_trimmed.time, fluxengine_hourly_Tg_trimmed, 
+        label='FluxEngine (TC Alex Hourly)', color='blue', linewidth=1.5)
+
+# Shade the anomaly area
+ax.fill_between(fluxengine_hourly_Tg_trimmed.time, uexp_baseline_hourly, fluxengine_hourly_Tg_trimmed, 
+                 where=(fluxengine_hourly_Tg_trimmed >= uexp_baseline_hourly),
+                 facecolor='green', alpha=0.15, interpolate=True)
+ax.fill_between(fluxengine_hourly_Tg_trimmed.time, uexp_baseline_hourly, fluxengine_hourly_Tg_trimmed, 
+                 where=(fluxengine_hourly_Tg_trimmed < uexp_baseline_hourly),
+                 facecolor='orange', alpha=0.15, interpolate=True)
+
+# --- Step 3: Add the Summary Box in Top Right ---
+stats_text = (
+    f"Total UExP C flux: {uexp_total_mass:.4f} Tg C\n"
+    f"Total MAXSS FluxEngine C flux: {fe_total_mass:.4f} Tg C\n"
+    f"---------------------------\n"
+    f"MAXSS FluxEngine - UExP = {net_difference:.4f} Tg C"
+)
+
+# transform=ax.transAxes ensures (0.95, 0.95) is relative to the plot box
+ax.text(0.97, 0.95, stats_text, transform=ax.transAxes, 
+        fontsize=10, verticalalignment='top', horizontalalignment='right',
+        bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='gray'))
+
+# --- Step 4: Formatting ---
+ax.set_title("Air-Sea CO2 Flux Comparison: TC Alex", fontsize=14, fontweight='bold')
+ax.set_ylabel("Flux Rate (Tg C hr$^{-1}$)", fontsize=12)
+ax.set_xlabel("Date and Time (UTC)", fontsize=12)
+
+# Format the dates
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b\n%H:%M'))
+plt.xticks(rotation=0)
+
+# 2. Force Y-Axis to Include 0
+# Get current limits
+ymin, ymax = ax.get_ylim()
+# Expand limits if 0 is not already included
+if ymin > 0: ax.set_ylim(bottom=0)
+if ymax < 0: ax.set_ylim(top=0)
+
+ax.legend(loc='upper left')
+ax.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.show()
+
+
 #DONT FORGET INTEGRATNIG SEA ICE/ PROPORTION ICE IMPACT
