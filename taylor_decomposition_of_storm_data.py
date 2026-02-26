@@ -13,6 +13,7 @@ from os import path
 from glob import glob
 import pandas as pd
 import xarray as xr
+import numpy as np
 import matplotlib.pyplot as plt
 
 #List out model components
@@ -30,6 +31,9 @@ plot_save_location = "E:/MAXSS_working_directory/taylor_decomposition/"
 
 #CHANGE WHEN I MOVE TO INLCUDING MORE REGIONS
 MAXSS_regions = ["north-atlantic"]
+
+#Initialize a list to collect all storm data
+all_storm_data = []
 
 # --- MAIN LOOP ---
 for region in MAXSS_regions: 
@@ -76,9 +80,47 @@ for region in MAXSS_regions:
                 
                 # Calculate the actual retrieved anomaly (The "Truth")
                 total_anomaly = ds_total['Hourly_flux'] - ds_ref['Hourly_flux']
+                
+                # Trim the data to avoid the zero-tail spikes from after model run end
+                valid_mask = (total_anomaly != 0)
+                
+                # We find the last index where data is not zero
+                last_idx = np.where(valid_mask.values)[0][-1] if any(valid_mask) else None
+                
+                if last_idx is not None:
+                    # Slice everything up to the last valid point
+                    w_sum = wind_contrib[:last_idx].sum().values.item()
+                    sst_sum = sst_contrib[:last_idx].sum().values.item()
+                    sss_sum = sss_contrib[:last_idx].sum().values.item()
+                    prec_sum = precip_contrib[:last_idx].sum().values.item()
+                    pres_sum = pres_contrib[:last_idx].sum().values.item()
+                    t_sum = taylor_sum[:last_idx].sum().values.item()
+                    act_total = total_anomaly[:last_idx].sum().values.item()
+                
+                    # Update plot axes to trimmed length
+                    plot_time = ds_total.time.values[:last_idx]
+                    plot_wind = wind_contrib[:last_idx]
+                    plot_sst  = sst_contrib[:last_idx]
+                    plot_sss  = sss_contrib[:last_idx]
+                    plot_prec = precip_contrib[:last_idx]
+                    plot_pres = pres_contrib[:last_idx]
+                    plot_sum  = taylor_sum[:last_idx]
+                    plot_act  = total_anomaly[:last_idx]
+                
+                else:
+                    w_sum = sst_sum = sss_sum = prec_sum = pres_sum = t_sum = act_total = 0
+                    print(f"Skipping {storm_id}: No active flux data found.")
+                    continue # This skips the plotting and the CSV entry for this specific storm
 
-                #calculate residual between total anomaly and Taylor sum
-                residual = total_anomaly - taylor_sum
+                # Store data for CSV
+                storm_entry = {
+                    'Storm_ID': storm_id, 'Basin': region, 'Year': year_name,
+                    'Wind_TgC': w_sum, 'SST_TgC': sst_sum, 'SSS_TgC': sss_sum,
+                    'Precip_TgC': prec_sum, 'Pressure_TgC': pres_sum,
+                    'Taylor_Sum_TgC': t_sum, 'Actual_Total_TgC': act_total,
+                    'Residual_TgC': act_total - t_sum}
+                
+                all_storm_data.append(storm_entry)
                 
                 ## Plot Taylor decomposition breakdown ##
                 
@@ -88,11 +130,13 @@ for region in MAXSS_regions:
                 plt.figure(figsize=(14, 8))
                 
                 # Plot Individual Taylor Components (The Drivers)
-                plt.plot(time_axis, wind_contrib, label='Wind Speed Contribution', color='black', linewidth=1.5)
-                plt.plot(time_axis, sst_contrib, label='SST Contribution', color='red', linewidth=1.5)
-                plt.plot(time_axis, sss_contrib, label='SSS Contribution', color='purple', alpha=0.6)
-                plt.plot(time_axis, precip_contrib, label='Precipitation Contribution', color='blue', alpha=0.6)
-                plt.plot(time_axis, pres_contrib, label='Pressure Contribution', color='orange', alpha=0.6)
+                plt.plot(plot_time, plot_wind, label='Wind Speed', color='black', linewidth=1.5)
+                plt.plot(plot_time, plot_sst, label='SST', color='red', linewidth=1.5)
+                plt.plot(plot_time, plot_sss, label='SSS', color='purple', alpha=0.6)
+                plt.plot(plot_time, plot_prec, label='Precipitation', color='blue', alpha=0.6)
+                plt.plot(plot_time, plot_pres, label='Pressure', color='orange', alpha=0.6)
+                plt.plot(plot_time, plot_sum, label='Taylor Sum', color='cyan', linestyle='--', linewidth=2)
+                plt.plot(plot_time, plot_act, label='Actual Total Anomaly', color='grey', linestyle=':', linewidth=2)
                 
                 # Plot the Taylor Sum vs. The Actual Total Anomaly
                 plt.plot(time_axis, taylor_sum, label='Taylor Sum ', 
@@ -125,7 +169,7 @@ for region in MAXSS_regions:
                     'Pressure': pres_contrib.sum().values,
                     'Taylor Sum': taylor_sum.sum().values,
                     'Actual Total': total_anomaly.sum().values }
-                                
+                               
                 # Create the Bar Plot
                 labels = list(driver_totals.keys())
                 values = list(driver_totals.values())
@@ -140,7 +184,7 @@ for region in MAXSS_regions:
                 plt.title(f'Cumulative Driver Contributions \nStorm: {storm_id}')
                 plt.xticks(rotation=45)
                 
-                # Add value labels on top of bars
+                # Set up bars
                 for bar in bars:
                     yval = bar.get_height()
                     plt.text(bar.get_x() + bar.get_width()/2, yval, round(float(yval), 4), 
@@ -153,3 +197,10 @@ for region in MAXSS_regions:
             except FileNotFoundError:
                 print(f"Missing a component for {storm_id}, skipping...")
                 continue
+
+if all_storm_data:
+    df = pd.DataFrame(all_storm_data)
+    csv_file = path.join(MAXSS_working_directory, "taylor_decomposition_summary.csv")
+    df.to_csv(csv_file, index=False)
+    print(f"\n--- PROCESSING COMPLETE ---")
+    print(f"CSV summary saved to: {csv_file}")
