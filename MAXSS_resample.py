@@ -1198,9 +1198,9 @@ if __name__ == "__main__":
                 pco2_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 pco2_on_wind_grid[:] = np.nan
                 conc_pco2_air_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                pco2_on_wind_grid[:] = np.nan
+                conc_pco2_air_on_wind_grid[:] = np.nan
                 reynolds_co2_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                pco2_on_wind_grid[:] = np.nan
+                reynolds_co2_on_wind_grid[:] = np.nan
                 
                 
                 #loop through the wind timestamps, extract the month and use that to pick which pco2 data to use.
@@ -1215,6 +1215,10 @@ if __name__ == "__main__":
                     conc_pco2_air_on_wind_grid[wind_step,:,:]=all_conc_co2_air_data_region_subset[month,:,:]
                     reynolds_co2_on_wind_grid[wind_step,:,:]=all_reynolds_data_region_subset[month,:,:]
                 
+                del all_pco2_data_region_subset
+                del all_conc_co2_air_data_region_subset
+                del all_reynolds_data_region_subset
+                gc.collect()
                 
                 # 4. save pco2 output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_Ford_et_al_pco2.nc".format(region,year,storm)));
@@ -1262,10 +1266,104 @@ if __name__ == "__main__":
                 
                 ncout.close();   
                 
+                ###############################################################
+                ## Create the pre-storm reference file for pco2 data
+                
+                #calculate pco2 water pre strom ref              
+                #pre storm is first 15 days,so 15 days * hourly resolution
+                #Suppress the "Mean of empty slice" for this calculation as some cells legitimatly always land
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    pc02_prestormref = np.nanmean(pco2_on_wind_grid[0:(15*24):1,:,:], axis=0)
+                #create empty grid
+                pco2_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                #set all the values equal to the pre storm mean values
+                for wind_step in range(0, wind_time_dimension):
+                    pco2_on_wind_grid_prestormref[wind_step,:,:]=pc02_prestormref[:,:]
+                
+                #calculate V gas water pre storm ref              
+                #pre storm is first 15 days,so 15 days * hourly resolution
+                #Suppress the "Mean of empty slice" for this calculation as some cells legitimatly always land
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    v_gas_prestormref = np.nanmean(conc_pco2_air_on_wind_grid[0:(15*24):1,:,:], axis=0)
+                #create empty grid
+                v_gas_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                #set all the values equal to the pre storm mean values
+                for wind_step in range(0, wind_time_dimension):
+                    v_gas_on_wind_grid_prestormref[wind_step,:,:]=v_gas_prestormref[:,:]
+                
+                ## Create the reynolds temp mean pre-storm ref
+                #pre storm is first 15 days,so 15 days * hourly resolution
+                #Suppress the "Mean of empty slice" for this calculation as some cells legitimatly always land
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    reynolds_temp_prestormref = np.nanmean(reynolds_co2_on_wind_grid[0:(15*24):1,:,:], axis=0)
+                #create empty grid
+                reynolds_temp_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                #set all the values equal to the pre storm mean values
+                for wind_step in range(0, wind_time_dimension):
+                    reynolds_temp_on_wind_grid_prestormref[wind_step,:,:]=reynolds_temp_prestormref[:,:]
+                
+                #save pco2 output into a netCDF 
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc".format(region,year,storm)));
+                ncout = Dataset(processedFilePath, 'w');
+                # create dataset and provide dimensions
+                
+                ncout.createDimension("lat", wind_lat_dimension);
+                ncout.createDimension("lon", wind_lon_dimension);
+                ncout.createDimension("time", wind_time_dimension);
+                
+                #dimension variables
+                var = ncout.createVariable("lat", float, ("lat",));
+                var.units = "lat (degrees North)";
+                var[:] = wind_lat;
+                
+                var = ncout.createVariable("lon", float, ("lon",));
+                var.units = "lon (degrees East)";
+                var[:] = wind_lon;
+                
+                var = ncout.createVariable("time", int, ("time",));
+                var.long_name = "Time";
+                var.units = "seconds since 1981-01-01";
+                var[:] = wind_time
+                
+                #data variables
+                var = ncout.createVariable("pCO2water_mean", float, ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                var.units = "microatm";
+                var.long_name = "Pre storm (15 days) mean of monthly pco2 resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                var[:] = pco2_on_wind_grid_prestormref;
+                
+                #data variables
+                var = ncout.createVariable("V_gas", float, ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                var.units = "micromol mol-1";
+                var.long_name = "Pre storm (15 days) mean of concentration CO2 in dry air (ppm) or dry molecular fraction of CO2 in the atmosphere (umol mol-1)";
+                var[:] = v_gas_on_wind_grid_prestormref;
+                
+                #data variables
+                var = ncout.createVariable("reynolds_temperature_mean", float, ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                var.units = "kelvin";
+                var.long_name = "Pre storm (15 days) mean of monthly Sea surface skin temperature resampled to hourly on a 0.25X0.25 degree spatial resolution";
+                var[:] = reynolds_temp_on_wind_grid_prestormref;
+                
+                ncout.close();   
+                
+                #delete no longer required variables
+                del pco2_on_wind_grid
+                del conc_pco2_air_on_wind_grid
+                del reynolds_co2_on_wind_grid
+                
+                del pco2_on_wind_grid_prestormref
+                del v_gas_on_wind_grid_prestormref
+                del reynolds_temp_on_wind_grid_prestormref
+                gc.collect()
+
+                
                 print("CO2 regridded for Storm = "+storm)
                 
-                
-                ##UP TO HERE ##
                 
                 ##NOT SURE IF I NEED TO USE CODE BELOW THIS POINT
                 
