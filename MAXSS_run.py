@@ -33,6 +33,12 @@ from pyproj import Geod # use pyproj as it is documented code
 import inspect;
 Month_Fmt = mdates.DateFormatter('%b %d')
 
+variables_to_exclude = [
+        "pressure", "sstfnd", "sstfndC", "sstfnd_count", "sstfnd_stddev", 
+        "pco2_sst", "rain", "sstskin", "sstskin_count", "sstskin_stddev", 
+        "vgas_air", "windu10_moment2", "windu10_moment3", 
+        "windu10_momentthreeseven", "windu10"]
+
 
 def get_datetimes(secondsSince1970):
     base = datetime(1970,1,1);
@@ -134,13 +140,12 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc')
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
 
-
+    
     # xCO2 air path
     filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
     filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
     #update variable name
     filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = V_gas')
-    
     
     # pco2 path
     filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
@@ -155,6 +160,10 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     filedata = filedata.replace('output_dir = output/', 'output_dir ='+"output\\{3}\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm,run_name))
     #output file format
     filedata = filedata.replace('output_file = MAXSS_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc', 'output_file = MAXSS_'+storm+'_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc')
+
+    # Exclude variables that are not needed from the netcdf outputs
+    filedata += "\nvariables_to_exclude = " + ",".join(exclude_list) + "\n"
+
 
     # Write the file out again
     with open(configfilenew, 'w') as file:
@@ -382,7 +391,10 @@ if __name__ == "__main__":
                     wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
 
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
-                run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
+                #run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
+                run_endtime=wind_dates[120].strftime("%Y-%m-%d %H:%M")#
+                
+                REMOVE THE ABOVE TEMP LINE OF CODE (TELL DAN ABOUT VERBOSE FLASG STILL ON)
                 
                 ## TEMPORARY DEBUGGING TEST ##
                 
