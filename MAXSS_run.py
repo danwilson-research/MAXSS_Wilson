@@ -77,7 +77,6 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
         filedata = filedata.replace('windu10_temporalChunking = numberoftimesteps','windu10_temporalChunking ='+str(timestepsinfile))
     
-
     # Wind moment 2 path
     if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
         filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
@@ -86,24 +85,6 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
         filedata = filedata.replace('windu10_moment2_temporalChunking = numberoftimesteps','windu10_moment2_temporalChunking ='+str(timestepsinfile))
 
-
-    # Wind moment 3 path
-    if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
-        filedata = filedata.replace('windu10_moment3_path = windmoment3path.nc', 'windu10_moment3_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
-        filedata = filedata.replace('windu10_moment3_temporalChunking = numberoftimesteps','windu10_moment3_temporalChunking ='+str(timestepsinfile))
-    else:
-        filedata = filedata.replace('windu10_moment3_path = windmoment3path.nc', 'windu10_moment3_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
-        filedata = filedata.replace('windu10_moment3_temporalChunking = numberoftimesteps','windu10_moment3_temporalChunking ='+str(timestepsinfile))
-    
-    # Wind moment 3.7 path
-    if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
-        filedata = filedata.replace('windu10_momentthreeseven_path = windmomentthreesevenpath.nc', 'windu10_momentthreeseven_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
-        filedata = filedata.replace('windu10_momentthreeseven_temporalChunking = numberoftimesteps','windu10_momentthreeseven_temporalChunking ='+str(timestepsinfile))
-    else:
-        filedata = filedata.replace('windu10_momentthreeseven_path = windmomentthreesevenpath.nc', 'windu10_momentthreeseven_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
-        filedata = filedata.replace('windu10_momentthreeseven_temporalChunking = numberoftimesteps','windu10_momentthreeseven_temporalChunking ='+str(timestepsinfile))
-        
-
     # SST paths
     if run_name=="MAXSS_RUN" or run_name=="SST_RUN":
         filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc')
@@ -111,7 +92,6 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     else:
         filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc')
         filedata = filedata.replace('sstfnd_temporalChunking = numberoftimesteps','sstfnd_temporalChunking ='+str(timestepsinfile))
-    
     
     # salinity path
     if run_name=="MAXSS_RUN" or run_name=="SSS_RUN":
@@ -162,7 +142,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     filedata = filedata.replace('output_file = MAXSS_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc', 'output_file = MAXSS_'+storm+'_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc')
 
     # Exclude variables that are not needed from the netcdf outputs
-    filedata += "\nvariables_to_exclude = " + ",".join(exclude_list) + "\n"
+    filedata += "\nexclude_outputs = " + ",".join(variables_to_exclude) + "\n"
 
 
     # Write the file out again
@@ -392,9 +372,9 @@ if __name__ == "__main__":
 
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
                 #run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
-                run_endtime=wind_dates[120].strftime("%Y-%m-%d %H:%M")#
+                run_endtime=wind_dates[96].strftime("%Y-%m-%d %H:%M")#
                 
-                REMOVE THE ABOVE TEMP LINE OF CODE (TELL DAN ABOUT VERBOSE FLASG STILL ON)
+                #REMOVE THE ABOVE TEMP LINE OF CODE (TELL DAN ABOUT VERBOSE FLASG STILL ON)
                 
                 ## TEMPORARY DEBUGGING TEST ##
                 
@@ -421,7 +401,7 @@ if __name__ == "__main__":
                 # call custom function which copies file template and makes edits
                 configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=True);
+                runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, wind_storm_land_fraction)
 

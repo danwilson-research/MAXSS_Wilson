@@ -107,7 +107,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]):
+                if any(name in storm for name in [  ]): #"BONNIE", "COLIN", "MARIA", "RINA"
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
