@@ -107,7 +107,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [  ]): #"BONNIE", "COLIN", "MARIA", "RINA"
+                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]): 
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -170,13 +170,9 @@ if __name__ == "__main__":
                 min_lon=wind_lon[0]
                 max_lon=wind_lon[0-1] 
                     
-                #### calculate wind speed from east and west components
-                wind_speed = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=np.float32);
-                wind_speed=pow((pow(wind_eastward,2)+pow(wind_northward,2)),0.5)
-                
-                Wind_moment2=pow(wind_speed,2)
-                Wind_moment3=pow(wind_speed,3)
-                Wind_moment3point7=pow(wind_speed,3.742)
+                #### calculate wind speed and wind moment2 from east and west components
+                wind_speed = np.hypot(wind_eastward, wind_northward)
+                Wind_moment2 = wind_speed**2
 
                 #### stop wind fields clogging up memory
                 del wind_eastward, wind_northward ,winds_nc
@@ -219,18 +215,6 @@ if __name__ == "__main__":
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = Wind_moment2;
                 
-                #data variables
-                var = ncout.createVariable("third_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
-                var.units = "m3 s-3";
-                var.long_name = "Third moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
-                var[:] = Wind_moment3;
-                
-                var = ncout.createVariable("thirdseven_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
-                var.units = "m3.742 s-3.742";
-                var.long_name = "3.742 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
-                var[:] = Wind_moment3point7;
                 ncout.close();  
                 
                 
@@ -239,22 +223,17 @@ if __name__ == "__main__":
                 #pre storm is first 15 days,so 15 days * hourly resolution
                 wind_prestormref=np.nanmean(wind_speed[0:(15*24):1,:,:],axis =(0))
                 wind_prestormref_second_moment=np.nanmean(Wind_moment2[0:(15*24):1,:,:],axis =(0))
-                wind_prestormref_third_moment=np.nanmean(Wind_moment3[0:(15*24):1,:,:],axis =(0))
-                wind_prestormref_thirdseven_moment=np.nanmean(Wind_moment3point7[0:(15*24):1,:,:],axis =(0))
-
+                
                 #create empty grid
                 wind_speed_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 second_moment_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                third_moment_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                thirdseven_moment_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                
 
                 #set all the values equal to the pre storm mean values
                 for wind_step in range(0, wind_time_dimension):
                     wind_speed_prestormref[wind_step,:,:]=wind_prestormref[:,:]
                     second_moment_prestormref[wind_step,:,:]=wind_prestormref_second_moment[:,:]
-                    third_moment_prestormref[wind_step,:,:]=wind_prestormref_third_moment[:,:]
-                    thirdseven_moment_prestormref[wind_step,:,:]=wind_prestormref_thirdseven_moment[:,:]
-
+                    
                 #### save wind pre storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)));
 
@@ -293,23 +272,11 @@ if __name__ == "__main__":
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = second_moment_prestormref;
                 
-                #data variables
-                var = ncout.createVariable("third_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
-                var.units = "m3 s-3";
-                var.long_name = "Third moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
-                var[:] = third_moment_prestormref;
-                
-                var = ncout.createVariable("thirdseven_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
-                var.units = "m3.742 s-3.742";
-                var.long_name = "3.742 moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
-                var[:] = thirdseven_moment_prestormref;
                 ncout.close();   
                 
-                del wind_speed,Wind_moment2,Wind_moment3,Wind_moment3point7
-                del third_moment_prestormref,thirdseven_moment_prestormref,second_moment_prestormref,wind_speed_prestormref
-                del wind_prestormref_second_moment,wind_prestormref_third_moment,wind_prestormref_thirdseven_moment
+                del wind_speed,Wind_moment2
+                del second_moment_prestormref,wind_speed_prestormref
+                del wind_prestormref_second_moment
                 del wind_prestormref
                 print("Wind regridded for Storm = "+storm)
                 
