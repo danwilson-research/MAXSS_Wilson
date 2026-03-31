@@ -143,7 +143,16 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
 
     # Exclude variables that are not needed from the netcdf outputs
     filedata += "\nexclude_outputs = " + ",".join(variables_to_exclude) + "\n"
-
+    
+    #Set the mask used to only simulate flux during analysis period
+    filedata = filedata.replace('mask_path = data/mask/<YYYY><MM>_maskfile.nc', 'mask_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_storm_timings_with_masks.nc')
+    filedata = filedata.replace('mask_prod = mask_variable','mask_prod = analysis_mask')
+    filedata = filedata.replace('mask_temporalChunking = chunk_size','mask_temporalChunking ='+ time_chunk_val)
+    
+    #note that mask_timeDimensionName already set in config file template
+    #mask_timeDimensionName = time
+    
+    
 
     # Write the file out again
     with open(configfilenew, 'w') as file:
@@ -327,7 +336,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]):
+                if any(name in storm for name in [ "ALEX", "COLIN", "MARIA", "RINA" ]): # "BONNIE"
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -369,6 +378,8 @@ if __name__ == "__main__":
                     #### get start and end times - to be added to run call
                     wind_time = winds_nc.variables['time'][:]
                     wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
+                    
+                    time_chunk_val = str(len(wind_time))
 
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
                 #run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
