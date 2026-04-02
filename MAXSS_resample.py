@@ -120,7 +120,6 @@ if __name__ == "__main__":
                 #output directory 
                 output_location=path.join(MAXSS_working_directory+"\\output\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm))
                 
-
                 #### regrid data for this storm
                               
                 # need to get the identifier from the storm name as it is used in .nc file string
@@ -142,48 +141,19 @@ if __name__ == "__main__":
                     region_id="WP"  
                     
                     
-                #### MAXSS L4 Wind data ####
-                # Everything is resampled to wind data resolution
-                # Wind data .nc used to caculate storm timings and create masks
-                # as well as calculate wind speed.
-                
-                # load data
+                #### load L4 Wind data
                 winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
-                wind_eastward = winds_nc.variables['__eo_eastward_wind'][:]
-                wind_northward = winds_nc.variables['__eo_northward_wind'][:]
-                
-                # 2. Grab the EXACT fill value from the metadata
-                # This ensures your output matches the input perfectly
-                fill_value = winds_nc.variables['__eo_eastward_wind']._FillValue
-                
-                wind_eastward = wind_eastward.astype('float32')
-                wind_northward = wind_northward.astype('float32')
-                
-                # get wind data dimensions
-                wind_time_dimension=len(wind_eastward)
-                wind_lat_dimension=len(wind_eastward[0])
-                wind_lon_dimension=len(wind_eastward[0][0])
-                
-                # define lat,long,time variables - these are used to build new matrixes
-                wind_lat = winds_nc.variables['lat'][:]
-                wind_lon = winds_nc.variables['lon'][:]
-                wind_time = winds_nc.variables['time'][:]
-                wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
-                 
-                # min and max of wind grid lats and lons   
-                min_lat=wind_lat[0]
-                max_lat=wind_lat[0-1]                    
-                min_lon=wind_lon[0]
-                max_lon=wind_lon[0-1] 
-                    
-                ## Calculate storm timings and create analysis and pre storm period masks ##
                 
                 # 1. Extract the required variables from the NetCDF file
                 spatial_mask = winds_nc.variables['data_spatial_mask'][:] 
                 track_times = winds_nc.variables['__track_time'][:]
                 track_time_units = winds_nc.variables['__track_time'].units # Needed for datetime conversion
                 
-                # 2. Find out if the storm EVER passed over each grid cell
+                # 2. Grab the EXACT fill value from the metadata
+                # This ensures your output matches the input perfectly
+                fill_value = winds_nc.variables['__eo_eastward_wind']._FillValue
+                
+                # 3. Find out if the storm EVER passed over each grid cell
                 # We check if the maximum value along the time axis (axis 0) is 1
                 ever_in_storm_mask = np.max(spatial_mask, axis=0) == 1
                 
@@ -321,24 +291,24 @@ if __name__ == "__main__":
                 
                 print(f"Calculated storm timings {storm}.")
                 
-                ## Calculate if any cells hit twice by storm ##
+                ## Calculate if any cells hit twice by storm
                 
-                # # 1. Calculate the total number of hours the storm was over each cell
-                # # Summing the 1s and 0s along the time axis (axis 0) gives the total hours
-                # total_hours_in_storm = np.sum(spatial_mask, axis=0)
+                # 1. Calculate the total number of hours the storm was over each cell
+                # Summing the 1s and 0s along the time axis (axis 0) gives the total hours
+                total_hours_in_storm = np.sum(spatial_mask, axis=0)
                 
-                # # 2. Calculate the "window" of time from first arrival to last departure
-                # # We add 1 because if it arrived and left in the same hour, the duration is 1, not 0
-                # storm_window_duration = (last_hit_indices - first_hit_indices) + 1
+                # 2. Calculate the "window" of time from first arrival to last departure
+                # We add 1 because if it arrived and left in the same hour, the duration is 1, not 0
+                storm_window_duration = (last_hit_indices - first_hit_indices) + 1
                 
-                # # 3. Create a boolean mask highlighting areas hit multiple times
-                # # It checks if the actual hours are less than the window duration, AND ensures 
-                # # we are only looking at cells that were actually in the storm to begin with.
-                # hit_multiple_times_mask = (total_hours_in_storm < storm_window_duration) & ever_in_storm_mask
+                # 3. Create a boolean mask highlighting areas hit multiple times
+                # It checks if the actual hours are less than the window duration, AND ensures 
+                # we are only looking at cells that were actually in the storm to begin with.
+                hit_multiple_times_mask = (total_hours_in_storm < storm_window_duration) & ever_in_storm_mask
                 
-                # # 4. Count how many grid cells this happened to and print it for your records
-                # number_of_cells_hit_multiple_times = np.sum(hit_multiple_times_mask)
-                # print(f"Grid cells hit multiple times by {storm}: {number_of_cells_hit_multiple_times}")
+                # 4. Count how many grid cells this happened to and print it for your records
+                number_of_cells_hit_multiple_times = np.sum(hit_multiple_times_mask)
+                print(f"Grid cells hit multiple times by {storm}: {number_of_cells_hit_multiple_times}")
                 
                 ## Create 3D Analysis Period Mask ##
                 
@@ -370,12 +340,15 @@ if __name__ == "__main__":
                 
                 ## Save the storm timings and analysis period mask to a netcdf file ##
                 
-                # 1. Load in required bits of wind file
-                wind_eastward = winds_nc.variables['__eo_eastward_wind'][:]
-                wind_northward = winds_nc.variables['__eo_northward_wind'][:]
+                # 1. Load in required variables from wind netcdf
+                raw_eastward = winds_nc.variables['__eo_eastward_wind'][:]
+                raw_northward = winds_nc.variables['__eo_northward_wind'][:]
                 
-                wind_eastward = wind_eastward.astype('float32')
-                wind_northward = wind_northward.astype('float32')
+                # 2. Convert the mask to actual NaNs and THEN change to float32
+                # .filled(np.nan) ensures that the hidden fill values become 'Not a Number'
+                # so they are ignored by your later np.nanmedian() calls.
+                wind_eastward = raw_eastward.filled(np.nan).astype('float32')
+                wind_northward = raw_northward.filled(np.nan).astype('float32')
                 
                 # 2. get wind data dimensions
                 wind_time_dimension=len(wind_eastward)
@@ -389,10 +362,10 @@ if __name__ == "__main__":
                 wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
                  
                 # 4. min and max of wind grid lats and lons   
-                min_lat=np.min(wind_lat)
-                max_lat=np.max(wind_lat)                
-                min_lon=np.min(wind_lon)
-                max_lon=np.max(wind_lon)
+                min_lat=wind_lat[0]
+                max_lat=wind_lat[0-1]                    
+                min_lon=wind_lon[0]
+                max_lon=wind_lon[0-1] 
                 
                 #5. set up netcdf
                 processedFilePath = (path.join(f"maxss\\storm-atlas\\ibtracs\\{region}\\{year}\\{storm}\\Resampled_for_fluxengine_storm_timings_with_masks.nc"))
@@ -462,19 +435,22 @@ if __name__ == "__main__":
                 ncout.close()
                 print(f"Successfully saved 3D mask and timing variables for {storm}.")
                 
-                ## Calulate wind speed and moment ##
+                ## MAXSS L4 Wind data (wind speed and moment 2) ##
                 
                 # calculate wind speed and wind moment2 from east and west components
                 wind_speed = np.hypot(wind_eastward, wind_northward)
                 wind_moment2 = wind_speed**2
                 
-                #Extract the data and replace masked slots with the EXPLICIT fill value
-                # Use .filled() to convert the Masked Array back to a regular ndarray
-                wind_speed = wind_speed.filled(fill_value=fill_value).astype('float32')
-                wind_moment2 = wind_moment2.filled(fill_value=fill_value).astype('float32')
-
-                # stop wind fields clogging up memory
-                del wind_eastward, wind_northward ,winds_nc
+                # Check if data is masked array or standard narray and standardise by replacing nans with MAXSS fill value.
+                if hasattr(wind_speed, 'filled'):
+                    wind_speed = wind_speed.filled(fill_value=fill_value).astype('float32')
+                else:
+                    wind_speed = np.nan_to_num(wind_speed, nan=fill_value).astype('float32')
+                
+                if hasattr(wind_moment2, 'filled'):
+                    wind_moment2 = wind_moment2.filled(fill_value=fill_value).astype('float32')
+                else:
+                    wind_moment2 = np.nan_to_num(wind_moment2, nan=fill_value).astype('float32')
                 
                 # save wind speed to netCDF
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc".format(region,year,storm)));
@@ -518,66 +494,90 @@ if __name__ == "__main__":
                 
                 ncout.close();  
                 
-                #### MAXSS L4 Wind data pre storm reference
+                ## MAXSS L4 Wind: Median pre storm conditions over the 13 day pre-storm period ##
+                               
+                # 1. Create a copy of the data as floats so it can safely hold 'NaN' values
+                pre_storm_data = wind_speed.astype('float32')
+                pre_storm_moment_data = wind_moment2.astype('float32') 
                 
-                #pre storm is first 15 days,so 15 days * hourly resolution
-                wind_prestormref=np.nanmean(wind_speed[0:(15*24):1,:,:],axis =(0))
-                wind_prestormref_second_moment=np.nanmean(wind_moment2[0:(15*24):1,:,:],axis =(0))
+                # 2. Apply the pre-storm mask! 
+                # "Anywhere the pre_storm_mask_3d is False, change the data to NaN"
+                pre_storm_data[pre_storm_mask_3d == 0] = np.nan
+                pre_storm_moment_data[pre_storm_mask_3d == 0] = np.nan
                 
-                #create empty grid
-                wind_speed_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                second_moment_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
+                # 3. Calculate the median along the time axis (axis=0)
+                # np.nanmedian ignores the NaNs, so it ONLY calculates the median of the 
+                # valid data points inside your -15 to -2 day window!
+                # (We use warnings.catch_warnings to suppress the warning NumPy throws when 
+                # it encounters a grid cell that is 100% NaNs, like landmasses or areas the storm missed)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    pre_storm_median_2d = np.nanmedian(pre_storm_data, axis=0)
+                    pre_storm_moment_median_2d = np.nanmedian(pre_storm_moment_data, axis=0)
                 
+                print(f"Calculated 2D pre-storm median data for {storm}.")
+                
+                # 4. Broadcast the 2D arrays into 3D hourly format for Fluxengine!
+                # np.tile instantly copies the 2D map across the entire time dimension
+                # Replace NaNs in the 2D maps with your source fill value (1e20)
+                # This ensures that when you TILE them, the 3D array is already "clean"
+                pre_storm_median_2d = np.nan_to_num(pre_storm_median_2d, nan=fill_value)
+                pre_storm_moment_median_2d = np.nan_to_num(pre_storm_moment_median_2d, nan=fill_value)
+                
+                # 5. Broadcast the "clean" 2D arrays into 3D
+                wind_speed_prestormref_3d = np.tile(pre_storm_median_2d, (wind_time_dimension, 1, 1))
+                wind_moment2_prestormref_3d = np.tile(pre_storm_moment_median_2d, (wind_time_dimension, 1, 1))
+                
+                #### Save wind pre-storm output into a netCDF 
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)))
 
-                #set all the values equal to the pre storm mean values
-                for wind_step in range(0, wind_time_dimension):
-                    wind_speed_prestormref[wind_step,:,:]=wind_prestormref[:,:]
-                    second_moment_prestormref[wind_step,:,:]=wind_prestormref_second_moment[:,:]
+                ncout = Dataset(processedFilePath, 'w')
                     
-                #### save wind pre storm output into a netCDF 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)));
-
-                ncout = Dataset(processedFilePath, 'w');
-                    
-                #### create dataset and provide dimensions
-                ncout.createDimension("lat", wind_lat_dimension);
-                ncout.createDimension("lon", wind_lon_dimension);
-                ncout.createDimension("time", wind_time_dimension);
+                #### Create dataset and provide dimensions
+                ncout.createDimension("lat", wind_lat_dimension)
+                ncout.createDimension("lon", wind_lon_dimension)
+                ncout.createDimension("time", wind_time_dimension)
                 
-                #dimension variables
-                var = ncout.createVariable("lat", float, ("lat",));
-                var.units = "lat (degrees North)";
-                var[:] = wind_lat;
+                # Dimension variables
+                var = ncout.createVariable("lat", float, ("lat",))
+                var.units = "lat (degrees North)"
+                var[:] = wind_lat
                 
-                var = ncout.createVariable("lon", float, ("lon",));
-                var.units = "lon (degrees East)";
-                var[:] = wind_lon;
+                var = ncout.createVariable("lon", float, ("lon",))
+                var.units = "lon (degrees East)"
+                var[:] = wind_lon
                 
-                var = ncout.createVariable("time", int, ("time",));
-                var.long_name = "Time";
-                var.units = "seconds since 1981-01-01";
+                var = ncout.createVariable("time", int, ("time",))
+                var.long_name = "Time"
+                var.units = "seconds since 1981-01-01"
                 var[:] = wind_time
                 
-                #data variables
-                var = ncout.createVariable("windspeed", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
-                var.units = "m s-1";
-                var.long_name = "Pre storm (15 days) mean of hourly wind speed from MAXSS on a 0.25X0.25 degree spatial at a hourly temporal resolution";
-                var[:] = wind_speed_prestormref;
+                # Data variables
+                var = ncout.createVariable("windspeed", "f4", ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
+                                           chunksizes=(1, wind_lat_dimension, wind_lon_dimension))
+                var.units = "m s-1"
+                var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of hourly wind speed"
+                var[:] = wind_speed_prestormref_3d
                 
-                #data variables
-                var = ncout.createVariable("second_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                var = ncout.createVariable("second_moment_wind", "f4", ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
+                                           chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m2 s-2";
-                var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
-                var[:] = second_moment_prestormref;
+                var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
+                var[:] = wind_moment2_prestormref_3d;
                 
-                ncout.close();   
+                ncout.close()
+                print(f"Successfully saved hourly Fluxengine reference map for {storm}.")
                 
-                del wind_speed,wind_moment2
-                del second_moment_prestormref,wind_speed_prestormref
-                del wind_prestormref_second_moment
-                del wind_prestormref
+                del wind_eastward, wind_northward  # Large 3D input arrays
+                del wind_speed, wind_moment2       # Large 3D calculated arrays
+                del pre_storm_data, pre_storm_moment_data # Large 3D masked copies
+                del wind_speed_prestormref_3d, wind_moment2_prestormref_3d # Tiled 3D outputs
+                del analysis_period_mask_3d, pre_storm_mask_3d # Large 3D boolean/int masks
+                
+                gc.collect()
+                
                 print("Wind regridded for Storm = "+storm)
                 
                 
