@@ -108,7 +108,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]): 
+                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "ALEX" ]): #"RINA
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -152,8 +152,12 @@ if __name__ == "__main__":
                 wind_eastward = winds_nc.variables['__eo_eastward_wind'][:]
                 wind_northward = winds_nc.variables['__eo_northward_wind'][:]
                 
-                wind_eastward = wind_eastward.astype('float64')
-                wind_northward = wind_northward.astype('float64')
+                # 2. Grab the EXACT fill value from the metadata
+                # This ensures your output matches the input perfectly
+                fill_value = winds_nc.variables['__eo_eastward_wind']._FillValue
+                
+                wind_eastward = wind_eastward.astype('float32')
+                wind_northward = wind_northward.astype('float32')
                 
                 # get wind data dimensions
                 wind_time_dimension=len(wind_eastward)
@@ -317,24 +321,24 @@ if __name__ == "__main__":
                 
                 print(f"Calculated storm timings {storm}.")
                 
-                ## Calculate if any cells hit twice by storm
+                ## Calculate if any cells hit twice by storm ##
                 
-                # 1. Calculate the total number of hours the storm was over each cell
-                # Summing the 1s and 0s along the time axis (axis 0) gives the total hours
-                total_hours_in_storm = np.sum(spatial_mask, axis=0)
+                # # 1. Calculate the total number of hours the storm was over each cell
+                # # Summing the 1s and 0s along the time axis (axis 0) gives the total hours
+                # total_hours_in_storm = np.sum(spatial_mask, axis=0)
                 
-                # 2. Calculate the "window" of time from first arrival to last departure
-                # We add 1 because if it arrived and left in the same hour, the duration is 1, not 0
-                storm_window_duration = (last_hit_indices - first_hit_indices) + 1
+                # # 2. Calculate the "window" of time from first arrival to last departure
+                # # We add 1 because if it arrived and left in the same hour, the duration is 1, not 0
+                # storm_window_duration = (last_hit_indices - first_hit_indices) + 1
                 
-                # 3. Create a boolean mask highlighting areas hit multiple times
-                # It checks if the actual hours are less than the window duration, AND ensures 
-                # we are only looking at cells that were actually in the storm to begin with.
-                hit_multiple_times_mask = (total_hours_in_storm < storm_window_duration) & ever_in_storm_mask
+                # # 3. Create a boolean mask highlighting areas hit multiple times
+                # # It checks if the actual hours are less than the window duration, AND ensures 
+                # # we are only looking at cells that were actually in the storm to begin with.
+                # hit_multiple_times_mask = (total_hours_in_storm < storm_window_duration) & ever_in_storm_mask
                 
-                # 4. Count how many grid cells this happened to and print it for your records
-                number_of_cells_hit_multiple_times = np.sum(hit_multiple_times_mask)
-                print(f"Grid cells hit multiple times by {storm}: {number_of_cells_hit_multiple_times}")
+                # # 4. Count how many grid cells this happened to and print it for your records
+                # number_of_cells_hit_multiple_times = np.sum(hit_multiple_times_mask)
+                # print(f"Grid cells hit multiple times by {storm}: {number_of_cells_hit_multiple_times}")
                 
                 ## Create 3D Analysis Period Mask ##
                 
@@ -370,8 +374,8 @@ if __name__ == "__main__":
                 wind_eastward = winds_nc.variables['__eo_eastward_wind'][:]
                 wind_northward = winds_nc.variables['__eo_northward_wind'][:]
                 
-                wind_eastward = wind_eastward.astype('float64')
-                wind_northward = wind_northward.astype('float64')
+                wind_eastward = wind_eastward.astype('float32')
+                wind_northward = wind_northward.astype('float32')
                 
                 # 2. get wind data dimensions
                 wind_time_dimension=len(wind_eastward)
@@ -462,7 +466,12 @@ if __name__ == "__main__":
                 
                 # calculate wind speed and wind moment2 from east and west components
                 wind_speed = np.hypot(wind_eastward, wind_northward)
-                Wind_moment2 = wind_speed**2
+                wind_moment2 = wind_speed**2
+                
+                #Extract the data and replace masked slots with the EXPLICIT fill value
+                # Use .filled() to convert the Masked Array back to a regular ndarray
+                wind_speed = wind_speed.filled(fill_value=fill_value).astype('float32')
+                wind_moment2 = wind_moment2.filled(fill_value=fill_value).astype('float32')
 
                 # stop wind fields clogging up memory
                 del wind_eastward, wind_northward ,winds_nc
@@ -492,18 +501,20 @@ if __name__ == "__main__":
                 var[:] = wind_time
                 
                 #data variables
-                var = ncout.createVariable("windspeed", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                var = ncout.createVariable("windspeed", "f4", ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
+                                           chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m s-1";
                 var.long_name = "Hourly wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = wind_speed;
                 
                 #data variables
-                var = ncout.createVariable("second_moment_wind", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                var = ncout.createVariable("second_moment_wind", "f4", ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
+                                           chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "m2 s-2";
                 var.long_name = "Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
-                var[:] = Wind_moment2;
+                var[:] = wind_moment2;
                 
                 ncout.close();  
                 
@@ -511,7 +522,7 @@ if __name__ == "__main__":
                 
                 #pre storm is first 15 days,so 15 days * hourly resolution
                 wind_prestormref=np.nanmean(wind_speed[0:(15*24):1,:,:],axis =(0))
-                wind_prestormref_second_moment=np.nanmean(Wind_moment2[0:(15*24):1,:,:],axis =(0))
+                wind_prestormref_second_moment=np.nanmean(wind_moment2[0:(15*24):1,:,:],axis =(0))
                 
                 #create empty grid
                 wind_speed_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
@@ -563,7 +574,7 @@ if __name__ == "__main__":
                 
                 ncout.close();   
                 
-                del wind_speed,Wind_moment2
+                del wind_speed,wind_moment2
                 del second_moment_prestormref,wind_speed_prestormref
                 del wind_prestormref_second_moment
                 del wind_prestormref
