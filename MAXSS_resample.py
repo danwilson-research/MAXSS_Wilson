@@ -528,12 +528,12 @@ if __name__ == "__main__":
                 wind_speed_prestormref_3d = np.tile(pre_storm_median_2d, (wind_time_dimension, 1, 1))
                 wind_moment2_prestormref_3d = np.tile(pre_storm_moment_median_2d, (wind_time_dimension, 1, 1))
                 
-                #### Save wind pre-storm output into a netCDF 
+                # Save wind pre-storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)))
 
                 ncout = Dataset(processedFilePath, 'w')
                     
-                #### Create dataset and provide dimensions
+                # Create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension)
                 ncout.createDimension("lon", wind_lon_dimension)
                 ncout.createDimension("time", wind_time_dimension)
@@ -554,8 +554,8 @@ if __name__ == "__main__":
                 
                 # Data variables
                 var = ncout.createVariable("windspeed", "f4", ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
-                                           chunksizes=(1, wind_lat_dimension, wind_lon_dimension))
+                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value) #chunksizes=(1, wind_lat_dimension, wind_lon_dimension)
+                                           
                 var.units = "m s-1"
                 var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of hourly wind speed"
                 var[:] = wind_speed_prestormref_3d
@@ -581,18 +581,21 @@ if __name__ == "__main__":
                 print("Wind regridded for Storm = "+storm)
                 
                 
-                #### MAXSS ESACCI SST data
-                #### load data
+                ## MAXSS ESACCI SST data ##
+                # load data
                 sst_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_OSTIA-C3S-L4-GLOB-v2.1.nc".format(region,year,storm,region_id,storm_id)));
                 #sst = sst_nc.variables['__eo_analysed_sst'][:]
                 sst_lat = sst_nc.variables['lat'][:]
                 sst_lon = sst_nc.variables['lon'][:]
                 sst_time = sst_nc.variables['time'][:]
                 
-                #### resample SST to wind grid
+                # EXTRACT THE SST SPECIFIC FILL VALUE
+                sst_fill_value = sst_nc.variables['__eo_analysed_sst']._FillValue
+                
+                # resample SST to wind grid
                 iCoordMeshes = None; #Initially this is None but will be calculated exactly once. It's a long calculation so doesn't want to be repeated.
                 outputRes = 0.25;
-                #### Calculate binning information
+                # Calculate binning information
                 #Only do this once because it's computationally expensive but the same for all time steps
                 if iCoordMeshes is None: 
                     CCILats = sst_nc.variables['lat'][:]
@@ -600,7 +603,6 @@ if __name__ == "__main__":
                     #print("Calculating grid cell mapping...");
                     iCoordMeshes = np.full((wind_lat_dimension,wind_lon_dimension), None, dtype=object);
                     
-                
                     for ilat, lat in enumerate(np.arange(min_lat,max_lat , outputRes)):
                         #print("Grid cell mapping for latitude", lat);
                         for ilon, lon in enumerate(np.arange(min_lon,max_lon, outputRes)):
@@ -614,7 +616,7 @@ if __name__ == "__main__":
                 timesteps_sst=len(sst_time)
                 del ilat, ilon, CCILats,CCILons, lat , lon
                 
-                #### Store data for each day of the month
+                # Store data for each day of the month
                 sst_regrid_Vals = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
                 sst_regrid_ValsErr = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
                 sst_regrid_ValsCounts = np.empty((timesteps_sst, wind_lat_dimension,wind_lon_dimension), dtype=float);
@@ -633,11 +635,11 @@ if __name__ == "__main__":
                              
                 sst_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 
-                    #### get the data of each timestep in wind data
+                # get the data of each timestep in wind data
                 sst_time = sst_nc.variables['time'][:]
                 sst_dates = num2date(sst_time, sst_nc.variables['time'].units)
                 
-                    #### loop through the wind timestamps, extract the month and use that to pick which SST data to use.
+                # loop through the wind timestamps, extract the month and use that to pick which SST data to use.
                 for wind_step in range(0, wind_time_dimension):
                 
                     #now find the index of the CLOSEST value and use that
@@ -647,24 +649,25 @@ if __name__ == "__main__":
 
                     sst_on_wind_grid[wind_step,:,:]=sst_regrid_Vals[index_of_min_delta_from_target_date,:,:]
                     
-                #### save SST output into a netCDF 
+                #convert data to fill values rather than nan
+                sst_on_wind_grid = np.nan_to_num(sst_on_wind_grid, nan=sst_fill_value).astype('float32')
                 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc".format(region,year,storm)));
+                # save SST output into a netCDF 
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_Test.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
-                #### create dataset and provide dimensions
-                
+                # create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
                 
-                #dimension variables
-                var = ncout.createVariable("lat", float, ("lat",));
+                # dimension variables
+                var = ncout.createVariable("lat", "f4", ("lat",));
                 var.units = "lat (degrees North)";
                 var[:] = wind_lat;
                 
-                var = ncout.createVariable("lon", float, ("lon",));
+                var = ncout.createVariable("lon", "f4", ("lon",));
                 var.units = "lon (degrees East)";
                 var[:] = wind_lon;
                 
@@ -673,9 +676,9 @@ if __name__ == "__main__":
                 var.units = "seconds since 1981-01-01";
                 var[:] = wind_time
                 
-                #data variables
-                var = ncout.createVariable("sst", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                # data variables
+                var = ncout.createVariable("sst", "f4", ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, fill_value=sst_fill_value);
                 var.units = "Degrees Kelvin";
                 var.long_name = "Daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolutionn";
                 var[:] = sst_on_wind_grid;
@@ -684,11 +687,8 @@ if __name__ == "__main__":
                 
                 
                 #### MAXSS ESACCI SST data pre_storm_reference
-            
-                #example slicing for numpy 3d matrixes
-                # yy= np.random.randint(0, 100, size=(4, 5, 6))
-                # yyy=np.nanmean(yy[0:3:1,:,:],axis =(0)) 
-                #temp=sst_on_wind_grid[0:(15*24):1,:,:]
+                           
+                
                 
                 #pre storm is first 15 days,so 15 days * hourly resolution
                 SST_prestormref=np.nanmean(sst_on_wind_grid[0:(15*24):1,:,:],axis =(0))
@@ -698,15 +698,13 @@ if __name__ == "__main__":
                 for wind_step in range(0, wind_time_dimension):
                     sst_on_wind_grid_prestormref[wind_step,:,:]=SST_prestormref[:,:]
                 
-                
-                    
-                #### save SST pre storm output into a netCDF 
+                # save SST pre storm output into a netCDF 
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
-                #### create dataset and provide dimensions
+                # create dataset and provide dimensions
                 
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
