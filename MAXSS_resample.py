@@ -574,7 +574,6 @@ if __name__ == "__main__":
                 del wind_speed, wind_moment2       # Large 3D calculated arrays
                 del pre_storm_data, pre_storm_moment_data # Large 3D masked copies
                 del wind_speed_prestormref_3d, wind_moment2_prestormref_3d # Tiled 3D outputs
-                del analysis_period_mask_3d, pre_storm_mask_3d # Large 3D boolean/int masks
                 
                 gc.collect()
                 
@@ -649,11 +648,17 @@ if __name__ == "__main__":
 
                     sst_on_wind_grid[wind_step,:,:]=sst_regrid_Vals[index_of_min_delta_from_target_date,:,:]
                     
+                # Expand the 2D 'ever_in_storm_mask' to 3D so it matches the time dimension
+                ever_in_storm_mask_3d = np.tile(ever_in_storm_mask, (wind_time_dimension, 1, 1))
+                
+                # Turn any pixel the storm NEVER touched into a NaN
+                sst_on_wind_grid[ever_in_storm_mask_3d == 0] = np.nan
+                
                 #convert data to fill values rather than nan
                 sst_on_wind_grid = np.nan_to_num(sst_on_wind_grid, nan=sst_fill_value).astype('float32')
                 
                 # save SST output into a netCDF 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_Test.nc".format(region,year,storm)));
+                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
@@ -688,34 +693,40 @@ if __name__ == "__main__":
                 
                 #### MAXSS ESACCI SST data pre_storm_reference
                            
+                # 1. Create a float copy for safe NaN handling
+                pre_storm_sst = sst_on_wind_grid.copy()
                 
+                # 2. Apply the dynamic 3D mask you already calculated!
+                pre_storm_sst[pre_storm_mask_3d == 0] = np.nan
                 
-                #pre storm is first 15 days,so 15 days * hourly resolution
-                SST_prestormref=np.nanmean(sst_on_wind_grid[0:(15*24):1,:,:],axis =(0))
-                #create empty grid
-                sst_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                #set all the values equal to the pre storm mean values
-                for wind_step in range(0, wind_time_dimension):
-                    sst_on_wind_grid_prestormref[wind_step,:,:]=SST_prestormref[:,:]
+                # 3. Calculate the median/mean ONLY inside the pre-storm window
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    # Using nanmedian to match wind methodology
+                    SST_prestormref_2d = np.nanmedian(pre_storm_sst, axis=0)
+                    
+                # 4. Clean up NaNs with the correct fill value
+                SST_prestormref_2d = np.nan_to_num(SST_prestormref_2d, nan=sst_fill_value).astype('float32')
+                
+                # 5. Tile into 3D instantly
+                sst_on_wind_grid_prestormref = np.tile(SST_prestormref_2d, (wind_time_dimension, 1, 1))
                 
                 # save SST pre storm output into a netCDF 
-                
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
                 # create dataset and provide dimensions
-                
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
                 
-                #dimension variables
-                var = ncout.createVariable("lat", float, ("lat",));
+                # dimension variables
+                var = ncout.createVariable("lat", "f4", ("lat",));
                 var.units = "lat (degrees North)";
                 var[:] = wind_lat;
                 
-                var = ncout.createVariable("lon", float, ("lon",));
+                var = ncout.createVariable("lon", "f4", ("lon",));
                 var.units = "lon (degrees East)";
                 var[:] = wind_lon;
                 
@@ -724,23 +735,39 @@ if __name__ == "__main__":
                 var.units = "seconds since 1981-01-01";
                 var[:] = wind_time
                 
-                #data variables
-                var = ncout.createVariable("sst", float, ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                # data variables
+                var = ncout.createVariable("sst", "f4", ("time","lat", "lon"), 
+                                           zlib=True, complevel=1, shuffle=True, fill_value=sst_fill_value);
                 var.units = "Degrees Kelvin";
-                var.long_name = "Pre storm (15 days) mean of daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of daily ESACCI sea surface temperature resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sst_on_wind_grid_prestormref;
                 
                 ncout.close();   
                 
-
-                #### delete all the variables used during import and saving of SST      
-                del SST_prestormref,sst_on_wind_grid_prestormref,ncout, sst_dates, sst_lat,sst_lon,sst_nc,sst_on_wind_grid
-                del newVals, sst_regrid_ValsErr,sst_regrid_ValsCounts,newCountCount,newValsErr
-                del sst_time,sst_time_slice,sst_timesteps,sst_uncertainty_slice,
-                del processedFilePath,timesteps_sst,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
+                # Safely clean up un-used variables
+                # Combine all variables into a single list and check if they exist before deleting
+                vars_to_delete = [
+                    'sst_on_wind_grid', 'sst_regrid_Vals', 'pre_storm_sst', 
+                    'sst_on_wind_grid_prestormref', 'SST_prestormref_2d', 
+                    'sst_dates', 'sst_lat', 'sst_lon', 'sst_nc', 
+                    'newVals', 'sst_regrid_ValsErr', 'sst_regrid_ValsCounts', 
+                    'newCountCount', 'newValsErr', 'sst_time', 'sst_time_slice', 
+                    'sst_uncertainty_slice', 'timesteps_sst', 'abs_deltas_from_target_date', 
+                    'index_of_min_delta_from_target_date']
+                
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
+                
+                gc.collect()
                 print("SST regridded for Storm = "+storm)
-          
+                
+                
+                THIS IS WHERE I AM UP TO IN UPDATING THE SCRIPT
+                BE CAREFUL TO REMEMBER TO APPLY EVER IN STORM AREA MASK
+                THINK ABOUT APPLYING STORM ANALYSIS PERIOD MASK NOW! SO THAT I CNA THEN PROPAGATE THROUGH THE
+                REST OF THE SCRIPT.
+         
                     
                 #### MAXSS ESACCI SSS data
                     #### load data                
