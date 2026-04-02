@@ -24,6 +24,9 @@ import matplotlib.patches as mpatches
 import xarray as xr # Using xarray makes handling these cubes much easier
 import datetime
 
+#set the fill value to be used
+fill_value = 1e20
+
 MAXSS_working_directory = "E:/MAXSS_working_directory"; 
     
 #note to use the same file structure used by the project r.g. #maxss/storm-atlas/ibtracts/region/year/storm
@@ -75,7 +78,7 @@ for region in MAXSS_regions:
         for storm in MAXSS_storms:
             
             ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-            if any(name in storm for name in [ ]): #"BONNIE", "COLIN", "MARIA", "RINA" 
+            if any(name in storm for name in ["BONNIE", "COLIN", "ALEX" ]): #"RINA""MARIA"
                 print(f"Skipping storm: {storm}")
                 storm_counter += 1 # Important: increment the counter before skipping
                 continue
@@ -272,13 +275,13 @@ for region in MAXSS_regions:
             number_of_cells_hit_multiple_times = np.sum(hit_multiple_times_mask)
             print(f"Grid cells hit multiple times by {storm}: {number_of_cells_hit_multiple_times}")
             
-            ## --- Create 3D Analysis Period Mask --- ##
+            ## Create 3D Analysis Period Mask ##
             
-            # 1. Grab the full data time array (475 steps)
+            # 1. Grab the full data time array 
             full_data_times = winds_nc.variables['time'][:]
             full_data_units = winds_nc.variables['time'].units
             
-            # 2. Reshape for 3D broadcasting: (475, 1, 1)
+            # 2. Reshape for 3D broadcasting
             full_data_times_3d = full_data_times[:, np.newaxis, np.newaxis]
             
             # 3. Re-create the 3D mask using the FULL timeline
@@ -286,45 +289,57 @@ for region in MAXSS_regions:
             analysis_period_mask_3d = (full_data_times_3d >= pre_storm_ref_period_start_numeric) & \
                                       (full_data_times_3d <= post_storm_analysis_end_numeric)
             
-            print(f"New Mask Shape: {analysis_period_mask_3d.shape}") # Should be (475, Lat, Lon)
+            # Ensure this mask only keeps areas hit by the storm
+            analysis_period_mask_3d = np.logical_and(analysis_period_mask_3d, ever_in_storm_mask)
             
-            #Save the storm timings to a netcdf file
+            #print(f"New Mask Shape: {analysis_period_mask_3d.shape}") 
             
-            #Load in required bits of wind file
+            ## Calculating the pre-storm reference ##
+            
+            # 1. This compares the full timeline against the 15-day and 2-day offsets
+            pre_storm_mask_3d = (full_data_times_3d >= pre_storm_ref_period_start_numeric) & \
+                                (full_data_times_3d <= pre_storm_ref_period_end_numeric)
+                                
+            # 2. Only keep values for pixels the storm actually hit
+            pre_storm_mask_3d = np.logical_and(pre_storm_mask_3d, ever_in_storm_mask)
+            
+            ## Save the storm timings and analysis period mask to a netcdf file ##
+            
+            # 1. Load in required bits of wind file
             wind_eastward = winds_nc.variables['__eo_eastward_wind'][:]
             wind_northward = winds_nc.variables['__eo_northward_wind'][:]
             
-            wind_eastward = wind_eastward.astype('float64')
-            wind_northward = wind_northward.astype('float64')
+            wind_eastward = wind_eastward.astype('float32')
+            wind_northward = wind_northward.astype('float32')
             
-            #### get wind data dimensions
+            # 2. get wind data dimensions
             wind_time_dimension=len(wind_eastward)
             wind_lat_dimension=len(wind_eastward[0])
             wind_lon_dimension=len(wind_eastward[0][0])
             
-            #### define lat,long,time variables - these are used to build new matrixes
+            # 3. define lat,long,time variables - these are used to build new matrixes
             wind_lat = winds_nc.variables['lat'][:]
             wind_lon = winds_nc.variables['lon'][:]
             wind_time = winds_nc.variables['time'][:]
             wind_dates = num2date(wind_time, winds_nc.variables['time'].units)
              
-            #### min and max of wind grid lats and lons   
-            min_lat=wind_lat[0]
-            max_lat=wind_lat[0-1]                    
-            min_lon=wind_lon[0]
-            max_lon=wind_lon[0-1] 
+            # 4. min and max of wind grid lats and lons   
+            min_lat=np.min(wind_lat)
+            max_lat=np.max(wind_lat)                
+            min_lon=np.min(wind_lon)
+            max_lon=np.max(wind_lon)
             
-            # --- Save storm timings AND 3D Mask to a netcdf file ---
-            processedFilePath = (path.join(f"maxss\\storm-atlas\\ibtracs\\{region}\\{year}\\{storm}\\Resampled_for_fluxengine_storm_timings_with_mask.nc"))
+            #5. set up netcdf
+            processedFilePath = (path.join(f"maxss\\storm-atlas\\ibtracs\\{region}\\{year}\\{storm}\\Resampled_for_fluxengine_storm_timings_with_masks.nc"))
             ncout = Dataset(processedFilePath, 'w')
             
-            # 1. Define Dimensions
+            # 6. Define Dimensions
             # We now include 'time' which matches your 475-step data timeline
             ncout.createDimension("time", len(full_data_times))
             ncout.createDimension("lat", wind_lat_dimension)
             ncout.createDimension("lon", wind_lon_dimension)
             
-            # 2. Create Dimension Variables
+            # 7. Create Dimension Variables
             var_time = ncout.createVariable("time", float, ("time",))
             var_time.units = full_data_units
             var_time.calendar = storm_calendar
@@ -338,16 +353,27 @@ for region in MAXSS_regions:
             var_lon.units = "degrees_east"
             var_lon[:] = wind_lon
 
-            # 3. Create the 3D Mask Variable
-            # We use 'int8' (or 'byte') to save space since it's just 0s and 1s
+            # 8. Create the 3D Mask Variable
+            # Use 'int8' (or 'byte') to save space since it's just 0s and 1s
             var_mask = ncout.createVariable("analysis_mask", "i1", ("time", "lat", "lon"), 
                                             zlib=True, complevel=4, shuffle=True)
             var_mask.long_name = "3D Analysis Period Mask (-15 to +40 days)"
             var_mask.description = "1 = Valid window for that pixel, 0 = Outside window"
-            # We convert the boolean mask to integers (0 and 1) for saving
+            
+            # 10. We convert the boolean mask to integers (0 and 1) for saving
             var_mask[:] = analysis_period_mask_3d.astype(np.int8)
+            
+            # 11. Create the 3D Mask Variable
+            # Use 'int8' (or 'byte') to save space since it's just 0s and 1s
+            pre_storm_ref_mask_var = ncout.createVariable("pre_storm_ref_mask", "i1", ("time", "lat", "lon"), 
+                                            zlib=True, complevel=4, shuffle=True)
+            pre_storm_ref_mask_var.long_name = "3D Pre Storm reference Period Mask (-15 to -2 days)"
+            pre_storm_ref_mask_var.description = "1 = Valid window for that pixel, 0 = Outside window"
+            
+            # 12. We convert the boolean mask to integers (0 and 1) for saving
+            pre_storm_ref_mask_var[:] = pre_storm_mask_3d.astype(np.int8)
 
-            # 4. Create the 2D Timing Variables (Same as your original code)
+            # 13. Create the 2D Timing Variables (Same as your original code)
             var_pre_start = ncout.createVariable("pre_storm_start", float, ("lat", "lon"), zlib=True)
             var_pre_start.units = track_time_units
             var_pre_start[:] = pre_storm_ref_period_start_numeric
@@ -370,6 +396,93 @@ for region in MAXSS_regions:
 
             ncout.close()
             print(f"Successfully saved 3D mask and timing variables for {storm}.")
+            
+            #####################################################################################
+            ## Calculate the Median pre storm conditions over the 13 day pre-storm period ##
+            
+            # 1. Choose/calculate the 3D data you want the median of. 
+            # Here we calculate absolute wind speed and moment from the U and V components
+            wind_speed = np.sqrt(wind_eastward**2 + wind_northward**2)
+            wind_moment2 = wind_speed**2
+            
+            # 2. Create a copy of the data as floats so it can safely hold 'NaN' values
+            pre_storm_data = wind_speed.astype('float32')
+            pre_storm_moment_data = wind_moment2.astype('float32') 
+            
+            # 3. Apply the pre-storm mask! 
+            # We use the tilde (~) to invert the mask. This says: 
+            # "Anywhere the pre_storm_mask_3d is False, change the data to NaN"
+            pre_storm_data[~pre_storm_mask_3d] = np.nan
+            pre_storm_moment_data[~pre_storm_mask_3d] = np.nan
+            
+            # 4. Calculate the median along the time axis (axis=0)
+            # np.nanmedian ignores the NaNs, so it ONLY calculates the median of the 
+            # valid data points inside your -15 to -2 day window!
+            # (We use warnings.catch_warnings to suppress the warning NumPy throws when 
+            # it encounters a grid cell that is 100% NaNs, like landmasses or areas the storm missed)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                pre_storm_median_2d = np.nanmedian(pre_storm_data, axis=0)
+                pre_storm_moment_median_2d = np.nanmedian(pre_storm_moment_data, axis=0)
+            
+            print(f"Calculated 2D pre-storm median data for {storm}.")
+            
+            # 5. Broadcast the 2D arrays into 3D hourly format for Fluxengine!
+            # np.tile instantly copies the 2D map across the entire time dimension
+            # Replace NaNs in the 2D maps with your source fill value (1e20)
+            # This ensures that when you TILE them, the 3D array is already "clean"
+            pre_storm_median_2d = np.nan_to_num(pre_storm_median_2d, nan=fill_value)
+            pre_storm_moment_median_2d = np.nan_to_num(pre_storm_moment_median_2d, nan=fill_value)
+            
+            # 5. Broadcast the "clean" 2D arrays into 3D
+            wind_speed_prestormref_3d = np.tile(pre_storm_median_2d, (wind_time_dimension, 1, 1))
+            wind_moment2_prestormref_3d = np.tile(pre_storm_moment_median_2d, (wind_time_dimension, 1, 1))
+            
+            #### Save wind pre-storm output into a netCDF 
+            processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference_TEST2.nc".format(region,year,storm)))
+
+            ncout = Dataset(processedFilePath, 'w')
+                
+            #### Create dataset and provide dimensions
+            ncout.createDimension("lat", wind_lat_dimension)
+            ncout.createDimension("lon", wind_lon_dimension)
+            ncout.createDimension("time", wind_time_dimension)
+            
+            # Dimension variables
+            var = ncout.createVariable("lat", float, ("lat",))
+            var.units = "lat (degrees North)"
+            var[:] = wind_lat
+            
+            var = ncout.createVariable("lon", float, ("lon",))
+            var.units = "lon (degrees East)"
+            var[:] = wind_lon
+            
+            var = ncout.createVariable("time", int, ("time",))
+            var.long_name = "Time"
+            var.units = "seconds since 1981-01-01"
+            var[:] = wind_time
+            
+            # Data variables
+            var = ncout.createVariable("windspeed", "f4", ("time","lat", "lon"), 
+                                       zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
+                                       chunksizes=(1, wind_lat_dimension, wind_lon_dimension))
+            var.units = "m s-1"
+            var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of hourly wind speed"
+            var[:] = wind_speed_prestormref_3d
+            
+            var = ncout.createVariable("second_moment_wind", "f4", ("time","lat", "lon"), 
+                                       zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
+                                       chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+            var.units = "m2 s-2";
+            var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
+            var[:] = wind_moment2_prestormref_3d;
+            
+            ncout.close()
+            print(f"Successfully saved hourly Fluxengine reference map for {storm}.")
+            
+            # ADD EXTRA CODE TO INCLUDE WIND MOMENT ax2
+            # ADD EXTRA CODE TO MASK OUT AREAS THAT WE WONT BE MODELLING
+            # ADD THE BLOCK OF CODE TO THE RESAMPLE SCRIPT (ALONG WITH TWEAKING OTHER PRE STORM REF CODE SECTIONS)
             
             #####################################################################################
             # ## --- Sanity Check: Plot the 3D Mask at 4 Timesteps --- ##
