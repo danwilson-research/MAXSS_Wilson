@@ -1306,10 +1306,10 @@ if __name__ == "__main__":
                 
                 
                 #data variables
-                var = ncout.createVariable("land proportion", float, ("latitude", "longitude"), 
+                var = ncout.createVariable("land_proportion", float, ("latitude", "longitude"), 
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(wind_lat_dimension, wind_lon_dimension));
-                var.units = "Percentage";
-                var.long_name = "Fraction of grid cell as land (%)";
+                var.units = "1";
+                var.long_name = "Fraction of grid cell as land (0-1)";
                 var[:] = wind_land_fraction;
                 
                 ncout.close();   
