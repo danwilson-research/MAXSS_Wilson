@@ -39,13 +39,18 @@ def process_slice(valData, errData, outputRes=0.25):
     newGrid = np.full((wind_lat_dimension, wind_lon_dimension), np.nan, dtype=float);
     newGridCount = np.zeros((wind_lat_dimension, wind_lon_dimension), dtype=float);
     newGridErr = np.full((wind_lat_dimension, wind_lon_dimension), np.nan, dtype=float);
-    for ilat, lat in enumerate(np.arange(min_lat, max_lat, outputRes)):
-        for ilon, lon in enumerate(np.arange(min_lon, max_lon, outputRes)):
-            if iCoordMeshes[ilat, ilon] is not None:
-                newGrid[ilat, ilon] = np.nanmean(valData[iCoordMeshes[ilat, ilon]]);
-                #newGridCount[ilat, ilon] = np.nansum(countData[iCoordMeshes[ilat, ilon]]);
-                newGridCount[ilat, ilon] = len(iCoordMeshes[ilat, ilon][0]) * len(iCoordMeshes[ilat, ilon][0][0]);
-                newGridErr[ilat, ilon] = np.sqrt(np.nansum(pow(errData[iCoordMeshes[ilat, ilon]],2)));
+    
+    #Supress warning for landmass/empty cells
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+    
+        for ilat, lat in enumerate(np.arange(min_lat, max_lat, outputRes)):
+            for ilon, lon in enumerate(np.arange(min_lon, max_lon, outputRes)):
+                if iCoordMeshes[ilat, ilon] is not None:
+                    newGrid[ilat, ilon] = np.nanmean(valData[iCoordMeshes[ilat, ilon]]);
+                    #newGridCount[ilat, ilon] = np.nansum(countData[iCoordMeshes[ilat, ilon]]);
+                    newGridCount[ilat, ilon] = len(iCoordMeshes[ilat, ilon][0]) * len(iCoordMeshes[ilat, ilon][0][0]);
+                    newGridErr[ilat, ilon] = np.sqrt(np.nansum(pow(errData[iCoordMeshes[ilat, ilon]],2)));
     
     newGridErr[newGridCount!=0] = newGridErr[newGridCount!=0] / newGridCount[newGridCount!=0];
     
