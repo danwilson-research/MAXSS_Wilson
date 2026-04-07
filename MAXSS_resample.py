@@ -441,6 +441,11 @@ if __name__ == "__main__":
                 wind_speed = np.hypot(wind_eastward, wind_northward)
                 wind_moment2 = wind_speed**2
                 
+                # Any pixel where the mask is 0 (outside the -15 to +40 window) 
+                # gets converted to Not-a-Number (NaN)
+                wind_speed[analysis_period_mask_3d == 0] = np.nan
+                wind_moment2[analysis_period_mask_3d == 0] = np.nan
+                
                 # Check if data is masked array or standard narray and standardise by replacing nans with MAXSS fill value.
                 if hasattr(wind_speed, 'filled'):
                     wind_speed = wind_speed.filled(fill_value=fill_value).astype('float32')
@@ -519,16 +524,19 @@ if __name__ == "__main__":
                 
                 # 4. Broadcast the 2D arrays into 3D hourly format for Fluxengine!
                 # np.tile instantly copies the 2D map across the entire time dimension
-                # Replace NaNs in the 2D maps with your source fill value (1e20)
-                # This ensures that when you TILE them, the 3D array is already "clean"
-                pre_storm_median_2d = np.nan_to_num(pre_storm_median_2d, nan=fill_value)
-                pre_storm_moment_median_2d = np.nan_to_num(pre_storm_moment_median_2d, nan=fill_value)
-                
-                # 5. Broadcast the "clean" 2D arrays into 3D
                 wind_speed_prestormref_3d = np.tile(pre_storm_median_2d, (wind_time_dimension, 1, 1))
                 wind_moment2_prestormref_3d = np.tile(pre_storm_moment_median_2d, (wind_time_dimension, 1, 1))
                 
-                # Save wind pre-storm output into a netCDF 
+                # 5. Apply the 3D analysis period mask to remove data that will not be used in Flux calculations
+                wind_speed_prestormref_3d[analysis_period_mask_3d == 0] = np.nan
+                wind_moment2_prestormref_3d[analysis_period_mask_3d == 0] = np.nan
+                
+                # 6. Replace NaNs with source fill value (converts both land and areas we just masked)
+                # This ensures that when you TILE them, the 3D array is already "clean"
+                wind_speed_prestormref_3d = np.nan_to_num(wind_speed_prestormref_3d, nan=fill_value).astype('float32')
+                wind_moment2_prestormref_3d = np.nan_to_num(wind_moment2_prestormref_3d, nan=fill_value).astype('float32')
+                
+                # 7. Save wind pre-storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)))
 
                 ncout = Dataset(processedFilePath, 'w')
@@ -561,8 +569,7 @@ if __name__ == "__main__":
                 var[:] = wind_speed_prestormref_3d
                 
                 var = ncout.createVariable("second_moment_wind", "f4", ("time","lat", "lon"), 
-                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value,
-                                           chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
+                                           zlib=True, complevel=1, shuffle=True, fill_value=fill_value)#;chunksizes=(1, wind_lat_dimension, wind_lon_dimension)
                 var.units = "m2 s-2";
                 var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of Second moment of wind speed from MAXSS on a 0.25X0.25 degree gridspatial resolution";
                 var[:] = wind_moment2_prestormref_3d;
