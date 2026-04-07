@@ -701,7 +701,7 @@ if __name__ == "__main__":
                 ncout.close();   
                 
                 
-                #### MAXSS ESACCI SST data pre_storm_reference
+                ## MAXSS ESACCI SST Median pre storm conditions over the 13 day pre-storm period ##
                            
                 # 1. Create a float copy for safe NaN handling
                 pre_storm_sst = sst_on_wind_grid.copy()
@@ -715,13 +715,16 @@ if __name__ == "__main__":
                     # Using nanmedian to match wind methodology
                     SST_prestormref_2d = np.nanmedian(pre_storm_sst, axis=0)
                     
-                # 4. Clean up NaNs with the correct fill value
-                SST_prestormref_2d = np.nan_to_num(SST_prestormref_2d, nan=sst_fill_value).astype('float32')
-                
-                # 5. Tile into 3D instantly
+                # 4. Tile the data into 3D
                 sst_on_wind_grid_prestormref = np.tile(SST_prestormref_2d, (wind_time_dimension, 1, 1))
                 
-                # save SST pre storm output into a netCDF 
+                # 5. Apply the 3D analysis period mask
+                sst_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
+                
+                # 6. Clean up NaNs with the correct fill value
+                sst_on_wind_grid_prestormref = np.nan_to_num(sst_on_wind_grid_prestormref, nan=sst_fill_value).astype('float32')
+                
+                # 7. Save SST pre storm median into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
@@ -754,7 +757,7 @@ if __name__ == "__main__":
                 
                 ncout.close();   
                 
-                # Safely clean up un-used variables
+                # 8. Safely clean up un-used variables
                 # Combine all variables into a single list and check if they exist before deleting
                 vars_to_delete = [
                     'sst_on_wind_grid', 'sst_regrid_Vals', 'pre_storm_sst', 
@@ -771,16 +774,10 @@ if __name__ == "__main__":
                 
                 gc.collect()
                 print("SST regridded for Storm = "+storm)
-                
-                
-                THIS IS WHERE I AM UP TO IN UPDATING THE SCRIPT
-                BE CAREFUL TO REMEMBER TO APPLY EVER IN STORM AREA MASK
-                THINK ABOUT APPLYING STORM ANALYSIS PERIOD MASK NOW! SO THAT I CNA THEN PROPAGATE THROUGH THE
-                REST OF THE SCRIPT.
          
-                    
-                #### MAXSS ESACCI SSS data
-                    #### load data                
+
+                ## MAXSS ESACCI SSS data ##
+                # 1. load data                
                 sss_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ESACCI-SEASURFACESALINITY-L4-SSS-MERGED_OI_7DAY_RUNNINGMEAN_DAILY_25km.nc".format(region,year,storm,region_id,storm_id)));
                 #sss = sss_nc.variables['__eo_sss'][:]
                 sss_lat = sss_nc.variables['lat'][:]
