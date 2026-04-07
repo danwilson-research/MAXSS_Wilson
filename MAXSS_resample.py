@@ -922,22 +922,36 @@ if __name__ == "__main__":
                 
                 ncout.close(); 
                 
-                ## MAXSS ESACCI SSS data pre_storm_reference ##
+                ## MAXSS ESACCI SSS data pre storm median over 13 day pre storm period ##
 
-                #pre storm is first 15 days,so 15 days * hourly resolution
-                SSS_prestormref=np.nanmean(sss_on_wind_grid[0:(15*24):1,:,:],axis =(0))
-                #create empty grid
-                sss_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                #set all the values equal to the pre storm mean values
-                for wind_step in range(0, wind_time_dimension):
-                    sss_on_wind_grid_prestormref[wind_step,:,:]=SSS_prestormref[:,:]
+                # 1. Create a float copy for safe NaN handling
+                pre_storm_sss = sss_on_wind_grid.copy()
                 
-                    #### save SSS output into a netCDF 
+                # 2. Apply the dynamic pre storm analysis period 3D mask you calculated earlier!
+                pre_storm_sss[pre_storm_mask_3d == 0] = np.nan
+    
+                # 3. Calculate the median ONLY inside the pre-storm window
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    # Using nanmedian to match SST and wind methodology
+                    SSS_prestormref_2d = np.nanmedian(pre_storm_sss, axis=0)
+
+                # 4. Tile the 2D data into 3D instantly
+                sss_on_wind_grid_prestormref = np.tile(SSS_prestormref_2d, (wind_time_dimension, 1, 1))
+                
+                # 5. Apply the 3D analysis period mask
+                sss_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
+                
+                # 6. Clean up NaNs with the correct SSS fill value
+                sss_on_wind_grid_prestormref = np.nan_to_num(sss_on_wind_grid_prestormref, nan=sss_fill_value).astype('float32')
+                
+                
+                # 7. save SSS output into a netCDF 
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SSS_pre_storm_reference.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
-                    #### create dataset and provide dimensions
                 
+                # create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -957,24 +971,36 @@ if __name__ == "__main__":
                 var[:] = wind_time
                 
                 #data variables
-                var = ncout.createVariable("sss", float, ("time","lat", "lon"), 
+                var = ncout.createVariable("sss", float, ("time","lat", "lon"), fill_value=sss_fill_value,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "PSU";
-                var.long_name = "Pre storm (15 days) mean of ESACCI weekly sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of ESACCI weekly sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sss_on_wind_grid_prestormref;
                 
                 ncout.close();   
                 
-                    #### delete all the variables used during import and saving of sss      
-                del SSS_prestormref,ncout, sss_dates, sss_lat,sss_lon,sss_nc,sss_on_wind_grid,sss_on_wind_grid_prestormref
-                del newVals, sss_regrid_Vals,sss_time,sss_time_slice,sss_timesteps,sss_uncertainty_slice,SSS_nearest
-                del processedFilePath,timesteps_sss,abs_deltas_from_target_date,iCoordMeshes,index_of_min_delta_from_target_date
-                del where_sst_nan,values, newValsErr,newCountCount,p, pp, xcv, y, x_sss,z,xy_coord,grd_lat,grd_lon,grd_lats,grd_lons
-                del sst_regrid_Vals,sample_df,sample_df1
-                print("SSS regridded for Storm = "+storm)
+                # 8. Safely clean up un-used variables
+                # Combine all variables into a single list and check if they exist before deleting
+                vars_to_delete = [
+                    'sss_on_wind_grid', 'pre_storm_sss', 
+                    'sss_on_wind_grid_prestormref', 'SSS_prestormref_2d', 
+                    'sss_dates', 'sss_lat', 'sss_lon', 'sss_nc', 
+                    'newVals', 'sss_regrid_Vals', 
+                    'newCountCount', 'newValsErr', 'sss_time', 'sss_time_slice', 
+                    'sss_uncertainty_slice', 'timesteps_sss', 'abs_deltas_from_target_date', 
+                    'index_of_min_delta_from_target_date', 'iCoordMeshes', 'SSS_nearest',
+                    'where_sst_nan', 'values', 'p', 'pp', 'xcv', 'y', 'x_sss', 'z',
+                    'xy_coord', 'grd_lat', 'grd_lon', 'grd_lats', 'grd_lons',
+                    'sample_df', 'sample_df1']
+                
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
+                
+                gc.collect()
+                print("SSS regridded for Storm = " + storm)
           
                 
-                  
                 #### MAXSS ERA5 precipitation 
                 #Note this resample code assumes precipitation is on the same grid spatial and temporal grid as the wind
                 #### load data
