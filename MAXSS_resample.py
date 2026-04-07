@@ -763,13 +763,13 @@ if __name__ == "__main__":
                 # 8. Safely clean up un-used variables
                 # Combine all variables into a single list and check if they exist before deleting
                 vars_to_delete = [
-                    'sst_on_wind_grid', 'sst_regrid_Vals', 'pre_storm_sst', 
+                    'sst_on_wind_grid', 'pre_storm_sst', 
                     'sst_on_wind_grid_prestormref', 'SST_prestormref_2d', 
                     'sst_dates', 'sst_lat', 'sst_lon', 'sst_nc', 
                     'newVals', 'sst_regrid_ValsErr', 'sst_regrid_ValsCounts', 
                     'newCountCount', 'newValsErr', 'sst_time', 'sst_time_slice', 
                     'sst_uncertainty_slice', 'timesteps_sst', 'abs_deltas_from_target_date', 
-                    'index_of_min_delta_from_target_date']
+                    'index_of_min_delta_from_target_date'] #',sst_regrid_Vals'
                 
                 for var_name in vars_to_delete:
                     if var_name in locals():
@@ -854,8 +854,21 @@ if __name__ == "__main__":
                     grd_lons, grd_lats = np.meshgrid(grd_lon, grd_lat)
                     SSS_nearest = griddata((x_sss, y), z, (grd_lons, grd_lats), method='nearest')
                 
-                    sss_regrid_Vals[sss_timesteps,:,:] = SSS_nearest;
+                    
+                    #now remove the stuff happening at the edges by making 
+                    #this is from SST grid boolean True
+                    where_sst_nan=np.isnan(sst_regrid_Vals[0,:,:])
+                    xcv=np.where(where_sst_nan)
+                    p=xcv[0]
+                    pp=xcv[1]
+                    SSS_nearest[p,pp]=float("nan")
                 
+                    #SSS_nearest=np.flipud(SSS_nearest)
+                    sss_regrid_Vals[sss_timesteps,:,:] = SSS_nearest;
+                    #sss_regrid_ValsErr[sss_timesteps,:,:] = newValsErr;
+                    #sss_regrid_ValsCounts[sss_timesteps,:,:] = newCountCount;
+                
+        
                 # 5. Get the data of each timestep in wind data
                 sss_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 sss_time = sss_nc.variables['time'][:]
