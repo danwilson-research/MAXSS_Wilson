@@ -655,11 +655,9 @@ if __name__ == "__main__":
 
                     sst_on_wind_grid[wind_step,:,:]=sst_regrid_Vals[index_of_min_delta_from_target_date,:,:]
                     
-                # Expand the 2D 'ever_in_storm_mask' to 3D so it matches the time dimension
-                ever_in_storm_mask_3d = np.tile(ever_in_storm_mask, (wind_time_dimension, 1, 1))
-                
-                # Turn any pixel the storm NEVER touched into a NaN
-                sst_on_wind_grid[ever_in_storm_mask_3d == 0] = np.nan
+                # Apply the 3D analysis period mask (-15 to +40 days)
+                #(This mask already inherently includes the 'ever_in_storm' boundaries)
+                sst_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
                 
                 #convert data to fill values rather than nan
                 sst_on_wind_grid = np.nan_to_num(sst_on_wind_grid, nan=sst_fill_value).astype('float32')
