@@ -590,6 +590,9 @@ if __name__ == "__main__":
                 
                 gc.collect()
                 
+                # 8. Close wind data netcdf
+                winds_nc.close()
+                
                 print("Wind regridded for Storm = "+storm)
                 
                 
@@ -701,6 +704,9 @@ if __name__ == "__main__":
                 var[:] = sst_on_wind_grid;
                 
                 ncout.close();   
+                
+                # . close sst netcdf 
+                sst_nc.close()
                 
                 
                 ## MAXSS ESACCI SST Median pre storm conditions over the 13 day pre-storm period ##
@@ -854,7 +860,6 @@ if __name__ == "__main__":
                     grd_lons, grd_lats = np.meshgrid(grd_lon, grd_lat)
                     SSS_nearest = griddata((x_sss, y), z, (grd_lons, grd_lats), method='nearest')
                 
-                    
                     #now remove the stuff happening at the edges by making 
                     #this is from SST grid boolean True
                     where_sst_nan=np.isnan(sst_regrid_Vals[0,:,:])
@@ -922,6 +927,9 @@ if __name__ == "__main__":
                 
                 ncout.close(); 
                 
+                # 10. close salinity netcdf 
+                sss_nc.close()
+                
                 ## MAXSS ESACCI SSS data pre storm median over 13 day pre storm period ##
 
                 # 1. Create a float copy for safe NaN handling
@@ -945,9 +953,7 @@ if __name__ == "__main__":
                 # 6. Clean up NaNs with the correct SSS fill value
                 sss_on_wind_grid_prestormref = np.nan_to_num(sss_on_wind_grid_prestormref, nan=sss_fill_value).astype('float32')
                 
-                
                 # 7. save SSS output into a netCDF 
-                
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SSS_pre_storm_reference.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
                 
@@ -1001,27 +1007,30 @@ if __name__ == "__main__":
                 print("SSS regridded for Storm = " + storm)
           
                 
-                #### MAXSS ERA5 precipitation 
+                ## MAXSS ERA5 precipitation  ##
                 #Note this resample code assumes precipitation is on the same grid spatial and temporal grid as the wind
-                #### load data
+                
+                # 1. load data
                 precip_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_Precipitation.nc".format(region,year,storm,region_id,storm_id)))
                 
-                # Load data into memory
                 p_lat = precip_nc.variables['lat'][:]
                 p_lon = precip_nc.variables['lon'][:]
                 p_time = precip_nc.variables['time'][:]
                 
-                # Load data and immediately replace mask with NaN to avoid issues with conversion
+                # 2. extract precipitation fill value
+                precip_fill_value = precip_nc.variables['__eo_tp']._FillValue
+                
+                # 2. replace mask with NaN to avoid issues with conversion
                 p_data_raw = precip_nc.variables['__eo_tp'][:] # Shape: (time, lat, lon)
                 p_data = np.ma.filled(p_data_raw, fill_value=np.nan)
                 
-                #### 1. Handle Latitude Orientation
+                # 3. Handle Latitude Orientation
                 # If precip lat is [20, 19.75, 19.5] (descending) and wind lat is [19.5, 19.75, 20] (ascending)
                 if p_lat[0] > p_lat[-1]:
                     p_lat = p_lat[::-1]
                     p_data = p_data[:, ::-1, :]
                     
-                # 2. Check Shape/Dimensions 
+                # 4. Check Shape/Dimensions 
                 # Compare the lengths of the latitude and longitude arrays
                 if (wind_lat.shape != p_lat.shape) or (wind_lon.shape != p_lon.shape):
                     print(f"\n!!! FATAL ERROR: Grid Dimension Mismatch for storm {storm} !!!")
@@ -1030,7 +1039,7 @@ if __name__ == "__main__":
                     print("  > ACTION: Stopping script. You must regrid the inputs to match.")
                     sys.exit(1) # stops the script immediately
             
-                # Check Coordinate Values
+                # 5. Check Coordinate Values
                 # Use np.allclose to allow for tiny floating-point differences (e.g. 19.0000001 vs 19.0)
                 # atol=1e-4 roughly equals 11 meters, which is strict enough for 0.25 deg grids
                 lat_match = np.allclose(wind_lat, p_lat, atol=1e-4)
@@ -1061,14 +1070,14 @@ if __name__ == "__main__":
                     print("  > ACTION: Stopping script to prevent physical errors.")
                     sys.exit(1)
             
-                print(f"SUCCESS: Grids for {storm} are aligned.")
+                print(f"SUCCESS: Grids for {storm} are aligned for Precipitation data.")
                 
-                #### 3. Vectorized Unit Conversion
+                # 6. Vectorized Unit Conversion
                 # ERA5 is 'm' per hour, FluxEngine needs 'mm/day'. 1m = 1000mm. Since it's hourly, * 24 for daily rate.
                 unit_conversion = 1000 * 24
                 p_data = p_data * unit_conversion
 
-                #### 4. Temporal Alignment (Vectorized)
+                # 7. Temporal Alignment (Vectorized)
                 precip_dates = num2date(p_time, precip_nc.variables['time'].units)
                 precip_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=np.float32)
                 
@@ -1081,18 +1090,22 @@ if __name__ == "__main__":
                     # If not, you can use simple slicing or scipy.interpolate.interp2d
                     precip_on_wind_grid[wind_step, :, :] = p_data[idx, :, :]
                 
-                print(f"Precipitation processed via vectorization for {storm}")
-                          
-                ####  5. Save precipitation pre storm output into a netCDF 
+                # 8. Apply the 3D analysis mask
+                precip_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
+                
+                # 9. Convert all NaNs to the original precipitation fill value
+                precip_on_wind_grid = np.nan_to_num(precip_on_wind_grid, nan=precip_fill_value).astype('float32')
+                
+                # 10. Save precipitation pre storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
                     
-                #### create dataset and provide dimensions
+                # create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
                 
-                #dimension variables
+                # dimension variables
                 var = ncout.createVariable("lat", float, ("lat",));
                 var.units = "lat (degrees North)";
                 var[:] = wind_lat;
@@ -1106,31 +1119,58 @@ if __name__ == "__main__":
                 var.units = "seconds since 1981-01-01";
                 var[:] = wind_time
                 
-                #data variables
-                var = ncout.createVariable("precipitation", float, ("time","lat", "lon"), 
+                # data variables
+                var = ncout.createVariable("precipitation", float, ("time","lat", "lon"), fill_value=precip_fill_value,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "mm day-1";
                 var.long_name = "ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
                 var[:] = precip_on_wind_grid;
                 
-                ncout.close();   
+                ncout.close();
                 
-                #### MAXSS ESACCI precipitation data pre_storm_reference
-                #pre storm is first 15 days,so 15 days * hourly resolution
-                precip_prestormref=np.nanmean(precip_on_wind_grid[0:(15*24):1,:,:],axis =(0))
-                #create empty grid
-                precip_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                #set all the values equal to the pre storm mean values
-                for wind_step in range(0, wind_time_dimension):
-                    precip_on_wind_grid_prestormref[wind_step,:,:]=precip_prestormref[:,:]
+                # 11. Close netcdf
+                precip_nc.close()
                 
+                # 12. Safely clean up un-used variables
+                vars_to_delete = [
+                    'p_data_raw', 'p_data', 'p_lat', 'p_lon', 'p_time', 'precip_dates',
+                    'abs_deltas', 'precip_nc', 'idx']
+
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
                 
-                #### save precip output into a netCDF 
+                gc.collect()
+                print("Precipitation regridded for Storm = " + storm)
                 
+                ## MAXSS ESACCI precipitation data pre_storm_reference ##
+                
+                # 1. Create a float copy for safe NaN handling
+                pre_storm_precip = precip_on_wind_grid.copy()
+                
+                # 2. Apply the dynamic pre-storm mask to isolate only pre-storm data
+                pre_storm_precip[pre_storm_mask_3d == 0] = np.nan
+                
+                # 3. Calculate the median ONLY inside the pre-storm window
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    # Using nanmedian instead of mean to match your other variables
+                    precip_prestormref_2d = np.nanmedian(pre_storm_precip, axis=0)
+                
+                # 4. Tile the 2D data into 3D
+                precip_on_wind_grid_prestormref = np.tile(precip_prestormref_2d, (wind_time_dimension, 1, 1))
+                
+                # 5. Apply the 3D analysis period mask
+                precip_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
+                
+                # 6. Clean up NaNs with the correct precipitation fill value
+                precip_on_wind_grid_prestormref = np.nan_to_num(precip_on_wind_grid_prestormref, nan=precip_fill_value).astype('float32')
+                
+                # 7. save precipitation output to a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
-                #### create dataset and provide dimensions
                 
+                # create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -1150,56 +1190,47 @@ if __name__ == "__main__":
                 var[:] = wind_time
                 
                 #data variables
-                var = ncout.createVariable("precipitation", float, ("time","lat", "lon"), 
+                var = ncout.createVariable("precipitation", float, ("time","lat", "lon"), fill_value=precip_fill_value,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "mm d-1";
-                var.long_name = "Pre storm (15 days) mean of ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
+                var.long_name = "Dynamic Pre-storm median of ERA5 hourly precipitation on a 0.25X0.25 degree spatial with hourly temporal resolution";
                 var[:] = precip_on_wind_grid_prestormref;
                 
                 ncout.close();   
                 
-                #Clean up and close datasets and large arrays
-                # 1. Close the input NetCDF file (Crucial!)
-                if 'precip_nc' in locals() and precip_nc.isopen():
-                    precip_nc.close()
+                # Combine all variables into a single list and check if they exist before deleting
+                vars_to_delete = [
+                    'pre_storm_precip', 'precip_prestormref_2d',
+                    'precip_on_wind_grid', 'precip_on_wind_grid_prestormref',
+                    'p_data_raw', 'p_data', 'p_lat', 'p_lon', 'p_time', 'precip_dates',
+                    'abs_deltas', 'idx', 'ncout', 'precip_nc', 'processedFilePath', 'var']
+                
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
 
-                # 2. Delete large 3D Data Arrays (The biggest memory hogs)
-                del p_data_raw, p_data
-                del precip_on_wind_grid
-                del precip_on_wind_grid_prestormref
-                
-                # 3. Delete calculation intermediates
-                del precip_prestormref
-                del idx, abs_deltas  # Created inside the loop
-                
-                # 4. Delete coordinate/time arrays created for precip
-                del p_lat, p_lon, p_time, precip_dates
-                
-                # 5. Delete File Handlers/Paths
-                del ncout, precip_nc, processedFilePath, var
-
-                # 6. Force Garbage Collection (Optional but recommended for large loops)
                 gc.collect()
 
                 #Print to console that precipitation regridded.
-                print("precip regridded for Storm = "+storm)             
+                print("precipitation regridded for Storm = "+storm)             
                 
                                 
-                #### MAXSS ERA5 pressure data
-
-                #### load data
+                ## MAXSS ERA5 pressure data ##
+                # 1. load data
                 pressure_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_SLP.nc".format(region,year,storm,region_id,storm_id)));
-                #pressure = pressure_nc.variables['__eo_sp'][:]#Sea level pressure
                 pressure_lat = pressure_nc.variables['lat'][:]
                 pressure_lon = pressure_nc.variables['lon'][:]
                 pressure_time = pressure_nc.variables['time'][:]
+                pressure_data_raw = pressure_nc.variables['__eo_sp'][:]
                 
-                # Load pressure variable (__eo_sp)
-                # Use np.ma.filled to convert masked values to NaNs immediately
-                pressure_data_raw = pressure_nc.variables['__eo_sp'][:] 
+                # 2. Extract the fill value for pressure data
+                pressure_fill_value = pressure_nc.variables['__eo_sp']._FillValue
+                
+                # 3. Use np.ma.filled to convert masked values to NaNs immediately
                 pressure_data = np.ma.filled(pressure_data_raw, fill_value=np.nan)
                 
-                #### Grid Safety Check (Crucial when skipping regridding)
+                
+                # 4. Grid Safety Check (Crucial when skipping regridding)
                 # Ensure latitude orientation matches wind (e.g., both descending or both ascending)
                 if pressure_lat[0] > pressure_lat[-1] and wind_lat[0] < wind_lat[-1]:
                      pressure_lat = pressure_lat[::-1]
@@ -1219,13 +1250,12 @@ if __name__ == "__main__":
                     print(f"\n!!! FATAL ERROR: Pressure Grid Coordinates do not match Wind Grid for {storm} !!!")
                     sys.exit(1)
                     
-                #### Vectorized Time Alignment
+                # 5. Vectorized Time Alignment
                 # Instead of looping, we align time indices efficiently
                 pressure_dates = num2date(pressure_time, pressure_nc.variables['time'].units)
                 pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=np.float32)
 
                 # Vectorized search for closest time index
-                # (This is much faster than the nested loop method)
                 for wind_step in range(wind_time_dimension):
                     # Find index of pressure time closest to current wind time
                     # If the time axes are identical, this simply maps 0->0, 1->1, etc.
@@ -1233,12 +1263,18 @@ if __name__ == "__main__":
                     idx = np.argmin(abs_deltas)
                     pressure_on_wind_grid[wind_step, :, :] = pressure_data[idx, :, :]
                                                 
-                #### save pressure pre storm output into a netCDF 
+                # 6. Apply the 3D analysis mask
+                pressure_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
+                
+                # 7. Convert all NaNs back to the original pressure fill value
+                pressure_on_wind_grid = np.nan_to_num(pressure_on_wind_grid, nan=pressure_fill_value).astype('float32')
+                
+                # 8. Save pressure pre storm output into a netCDF 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc".format(region,year,storm)));
 
                 ncout = Dataset(processedFilePath, 'w');
                     
-                #### create dataset and provide dimensions
+                # create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -1258,32 +1294,55 @@ if __name__ == "__main__":
                 var[:] = wind_time
                 
                 #data variables
-                var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"), 
+                var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"), fill_value=pressure_fill_value,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "Pa";
                 var.long_name = "ERA5 hourly sea level pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = pressure_on_wind_grid;
                 
-                ncout.close();   
+                ncout.close();  
                 
-                #### MAXSS ERA5 pressure data pre storm_reference
+                # 9. Safely close the input NetCDF file
+                pressure_nc.close()
                 
-                #pre storm is first 15 days,so 15 days * hourly resolution
-                #Suppress the "Mean of empty slice" for this calculation as some cells legitimatly always land
+                # 10. Safely clean up un-used variables
+                vars_to_delete = [
+                    'pressure_data_raw', 'pressure_data', 'pressure_lat', 'pressure_lon', 
+                    'pressure_time', 'pressure_dates', 'abs_deltas', 'idx']
+                
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
+                
+                gc.collect()
+                print("Pressure regridded for Storm = " + storm)
+                
+                ## MAXSS ERA5 pressure data pre storm_reference ##
+                # 1. Create a float copy for safe NaN handling
+                pre_storm_pressure = pressure_on_wind_grid.copy()
+                
+                # 2. Apply the dynamic pre-storm mask to isolate only pre-storm data
+                pre_storm_pressure[pre_storm_mask_3d == 0] = np.nan
+                
+                # 3. Calculate the median ONLY inside the pre-storm window
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=RuntimeWarning)
-                    pressure_prestormref = np.nanmean(pressure_on_wind_grid[0:(15*24):1,:,:], axis=0)
-                #create empty grid
-                pressure_on_wind_grid_prestormref = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-                #set all the values equal to the pre storm mean values
-                for wind_step in range(0, wind_time_dimension):
-                    pressure_on_wind_grid_prestormref[wind_step,:,:]=pressure_prestormref[:,:]
+                    pressure_prestormref_2d = np.nanmedian(pre_storm_pressure, axis=0)
                 
-
+                # 4. Tile the 2D data into 3D instantly
+                pressure_on_wind_grid_prestormref = np.tile(pressure_prestormref_2d, (wind_time_dimension, 1, 1))
+                
+                # 5. Apply the 3D analysis period mask
+                pressure_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
+                
+                # 6. Clean up NaNs with the correct pressure fill value
+                pressure_on_wind_grid_prestormref = np.nan_to_num(pressure_on_wind_grid_prestormref, nan=pressure_fill_value).astype('float32')
+                
+                # 7. Save pressure output into a netCDF
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_pressure_pre_storm_reference.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
-                    #### create dataset and provide dimensions
-                
+
+                # create dataset and provide dimensions
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -1303,32 +1362,39 @@ if __name__ == "__main__":
                 var[:] = wind_time
                 
                 #data variables
-                var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"), 
+                var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"),fill_value=pressure_fill_value, 
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "Pa";
-                var.long_name = "Pre storm (15 days) mean of ERA5 hourly pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "Dynamic Pre-storm median of ERA5 hourly pressure resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = pressure_on_wind_grid_prestormref;
                 
                 ncout.close();   
                 
-                #### Cleanup
-                if 'pressure_nc' in locals() and pressure_nc.isopen():
-                    pressure_nc.close()
+                # 8. Clean up and close datasets and large arrays
                 
-                del pressure_data_raw, pressure_data, pressure_on_wind_grid
-                del pressure_on_wind_grid_prestormref
-                del pressure_lat, pressure_lon, pressure_time, pressure_dates
+                # Safely close the input NetCDF file if it is open
+                if 'pressure_nc' in locals() and hasattr(pressure_nc, 'isopen') and pressure_nc.isopen():
+                    pressure_nc.close()
+
+                # Combine all variables into a single list and check if they exist before deleting
+                vars_to_delete = ['pre_storm_pressure', 'pressure_prestormref_2d',
+                    'pressure_on_wind_grid', 'pressure_on_wind_grid_prestormref',
+                    'pressure_data_raw', 'pressure_data', 'pressure_lat', 'pressure_lon', 
+                    'pressure_time', 'pressure_dates', 'abs_deltas', 'idx', 
+                    'ncout', 'pressure_nc', 'processedFilePath', 'var', 'pressure_fill_value']
+                
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
                 
                 gc.collect()
                 
-                print("Pressure processed for Storm = "+storm)
+                print("Pressure pre-storm reference calculated and saved for Storm = " + storm)
 
-                #### MAXSS Land fraction 
-                
-                #### create dataset and provide dimensions
+                ## MAXSS Land fraction ##
+                # create dataset and provide dimensions
                 winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
                 wind_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
-                
                 
                 processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_land_fraction.nc".format(region,year,storm)));
                 ncout = Dataset(processedFilePath, 'w');
@@ -1344,7 +1410,6 @@ if __name__ == "__main__":
                 var = ncout.createVariable("longitude", float, ("longitude",));
                 var.units = "lon (degrees East)";
                 var[:] = wind_lon;
-                
                 
                 #data variables
                 var = ncout.createVariable("land_proportion", float, ("latitude", "longitude"), 
