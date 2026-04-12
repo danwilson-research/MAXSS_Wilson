@@ -113,7 +113,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "ALEX" ]): #"RINA
+                if any(name in storm for name in [ "RINA" ]): #BONNIE", "COLIN", "MARIA", "ALEX"
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -819,7 +819,7 @@ if __name__ == "__main__":
                 # 4. loop through timesteps 
                 timesteps_sss=len(sss_time)
                 
-                # Store data for each week of the month
+                # Store data for each day of the month
                 sss_regrid_Vals = np.empty((timesteps_sss, wind_lat_dimension,wind_lon_dimension), dtype=float);
                 #sss_regrid_ValsErr = np.empty((timesteps_sss, wind_lat_dimension,wind_lon_dimension), dtype=float);
                 #sss_regrid_ValsCounts = np.empty((timesteps_sss, wind_lat_dimension,wind_lon_dimension), dtype=float);
@@ -922,7 +922,7 @@ if __name__ == "__main__":
                 var = ncout.createVariable("sss", float, ("time","lat", "lon"), 
                                            zlib=True, complevel=1, shuffle=True, fill_value=sss_fill_value, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "PSU";
-                var.long_name = "Weekly ESACCI sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "Daily ESACCI sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sss_on_wind_grid;
                 
                 ncout.close(); 
@@ -980,7 +980,7 @@ if __name__ == "__main__":
                 var = ncout.createVariable("sss", float, ("time","lat", "lon"), fill_value=sss_fill_value,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "PSU";
-                var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of ESACCI weekly sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
+                var.long_name = "Dynamic Pre-storm (-15 to -2 days) median of ESACCI daily sea surface salinity resampled to a 0.25X0.25 degree spatial and hourly temporal resolution";
                 var[:] = sss_on_wind_grid_prestormref;
                 
                 ncout.close();   
