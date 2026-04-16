@@ -5,7 +5,7 @@ Created on Tue Apr 14 15:57:43 2026
 @author: dw557
 """
 
-## Script to plot total flux across storm
+## Script to plot total flux across storm in each model run (timeline and totals bar chart)
 
 # Import required packages
 import os
@@ -35,7 +35,7 @@ runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
 regions = ["north-atlantic"]
 
 # Storms to skip
-storms_to_skip = ["RINA", "MARIA"]
+storms_to_skip = [] #"RINA", "MARIA"
 
 # Set up a colourblind friendly colour scheme
 cb_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -152,7 +152,6 @@ if __name__ == "__main__":
                 timeseries_save_path = output_dir_timeseries / f"Total_flux_over_storm_{storm}.png"
                 
                 # 1. Plot Comparison Bar Chart
-                
                 plot_flux_data(runs, storm_totals, storm, 
                                ylabel='Total flux (Tg C)', is_bar=True,
                                output_path=bar_save_path)
