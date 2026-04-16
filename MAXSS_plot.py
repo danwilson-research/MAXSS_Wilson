@@ -18,7 +18,7 @@ from pyproj import Geod # use pyproj as it is documented code
 import inspect;
 Month_Fmt = mdates.DateFormatter('%b %d')
 
-runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SST_RUN","SSS_RUN","PRESSURE_RUN","PRECIPITATION_RUN"]
+runs=["MAXSS_RUN","REF_RUN","WIND_RUN","SST_NO_GRADIENTS_RUN","SST_WITH_GRADIENTS_RUN","SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN",] #"PRECIPITATION_RUN"
 #runs=["MAXSS_RUN","REF_RUN","WIND_RUN","PRESSURE_RUN"]
 
 # 1. Define your color map at the top of your script or before the plot
@@ -29,8 +29,7 @@ run_colors = {
     "SST_RUN": "r",
     "SSS_RUN": "darkorchid",
     "PRESSURE_RUN": "orange",
-    "PRECIPITATION_RUN": "blue"
-}
+    "PRECIPITATION_RUN": "blue"}
 
 def get_datetime(secondsSince1970):
     baseDate = datetime(1970,1,1);
@@ -103,7 +102,7 @@ if __name__ == "__main__":
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "BONNIE", "COLIN", "MARIA", "RINA" ]):
+                if any(name in storm for name in [  "MARIA", "RINA" ]): #"BONNIE","COLIN",
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -143,37 +142,31 @@ if __name__ == "__main__":
                     Hourlyfluxdate_for_this_run= int_flux_paths_nc.variables['time'][:]
                     Total_flux_for_this_run= int_flux_paths_nc.variables['Total_flux'][:]
                     
-
-
                     dates = [get_datetime(int(timeSecs)) for timeSecs in int_flux_paths_nc.variables["time"][:]];
-
 
                     #save data to 2d array to plot as bars
                     bar_plot_data[storm_counter,runcounter]=Total_flux_for_this_run
                     Timeseries_plot_data.append(Hourlyflux_for_this_run)
 
-                
-                
                     #### make timeseries figure of the flux for this storm
-                    fig1 = plt.figure(figsize=(24,15))
-                    gs = fig1.add_gridspec(1, 1)
-                    f1_ax1 = fig1.add_subplot(gs[0, :])
-                    plt.plot(dates,Hourlyflux_for_this_run, linewidth=1.5)
-                    plt.ylabel("Total flux in region (Tg C hr${^-1}$)",fontsize=36)
-                    plt.xlabel("Time",fontsize=36)
-                    f1_ax1.xaxis.set_major_formatter(Month_Fmt)
-                    plt.xticks(fontsize=36)
-                    plt.yticks(fontsize=36)
-                    plt.legend([name_of_run],fontsize=36)
-                    f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
-                    plt.grid()
-                    plt.show()
+                    # fig1 = plt.figure(figsize=(24,15))
+                    # gs = fig1.add_gridspec(1, 1)
+                    # f1_ax1 = fig1.add_subplot(gs[0, :])
+                    # plt.plot(dates,Hourlyflux_for_this_run, linewidth=1.5)
+                    # plt.ylabel("Total flux in region (Tg C hr${^-1}$)",fontsize=36)
+                    # plt.xlabel("Time",fontsize=36)
+                    # f1_ax1.xaxis.set_major_formatter(Month_Fmt)
+                    # plt.xticks(fontsize=36)
+                    # plt.yticks(fontsize=36)
+                    # plt.legend([name_of_run],fontsize=36)
+                    # f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
+                    # plt.grid()
+                    # plt.show()
 
                     runcounter=runcounter+1
 
-
                 # all of the plots where we want to compare runs
-                fig = plt.figure(figsize=(24,15))
+                fig = plt.figure(figsize=(7,5))
                 gs = fig.add_gridspec(1, 1)
                 f_ax1 = fig.add_subplot(gs[0, :])
                 #barlist=f_ax1.bar(runs, bar_plot_data[0], color = 'b', width = 0.95)
@@ -188,15 +181,14 @@ if __name__ == "__main__":
                     if run_name in run_colors:
                         barlist[i].set_color(run_colors[run_name])
                 #plt.title("Total flux over storm domain for storm period",fontsize=36)
-                plt.ylabel('Total flux (Tg C)',fontsize=36)
-                plt.xlabel('Runs',fontsize=36)
-                f_ax1.set_xticklabels(runs,rotation=90,fontsize=36)
-                plt.yticks(fontsize=36)
+                plt.ylabel('Total flux (Tg C)',fontsize=10)
+                plt.xlabel('Model Run',fontsize=10)
+                f_ax1.set_xticklabels(runs,rotation=45,fontsize=10)
+                plt.yticks(fontsize=10)
                 plt.show()
-                fig.savefig(r"output\plots\\\Integrated_fluxes_for_storm_{0}.png".format(storm));
+                #fig.savefig(r"output\plots\\\Integrated_fluxes_for_storm_{0}.png".format(storm));
     
-    
-                    # all of the plots where we want to compare runs
+                # all of the plots where we want to compare runs
                 fig = plt.figure(figsize=(24,15))
                 gs = fig.add_gridspec(1, 1)
                 f_ax1 = fig.add_subplot(gs[0, :])
@@ -213,8 +205,7 @@ if __name__ == "__main__":
                 f_ax1.set_xticklabels(runs,rotation=90,fontsize=36)
                 plt.yticks(fontsize=36)
                 plt.show()
-                fig.savefig(r"output\plots\\\Integrated_fluxes_for_storm_{0}_mainandref.png".format(storm));
-    
+                #fig.savefig(r"output\plots\\\Integrated_fluxes_for_storm_{0}_mainandref.png".format(storm));
     
                 fig1 = plt.figure(figsize=(24,15))
                 gs = fig1.add_gridspec(1, 1)
@@ -230,7 +221,7 @@ if __name__ == "__main__":
                 f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
                 plt.grid()
                 plt.show()
-                fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0})main_run.png".format(storm));
+                #fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0})main_run.png".format(storm));
 
                 
                 fig1 = plt.figure(figsize=(24,15))
@@ -248,31 +239,31 @@ if __name__ == "__main__":
                 f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
                 plt.grid()
                 plt.show()
-                fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0}main_run_and_ref.png".format(storm));
+                #fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0}main_run_and_ref.png".format(storm));
 
                 
-    
-                fig1 = plt.figure(figsize=(24,15))
+                fig1 = plt.figure(figsize=(8,4))
                 gs = fig1.add_gridspec(1, 1)
                 f1_ax1 = fig1.add_subplot(gs[0, :])
-                plt.plot(dates,Timeseries_plot_data[0],color="gray", linewidth=3)
-                plt.plot(dates,Timeseries_plot_data[1],color="brown", linewidth=3)
-                plt.plot(dates,Timeseries_plot_data[2],color="k", linewidth=3)
-                plt.plot(dates,Timeseries_plot_data[3],color="r", linewidth=3)
-                plt.plot(dates,Timeseries_plot_data[4],color="darkorchid", linewidth=3)
-                plt.plot(dates,Timeseries_plot_data[5],color="orange", linewidth=3)
-                plt.plot(dates, Timeseries_plot_data[6], color="blue", linewidth=3)
-                plt.plot(dates,np.zeros(len(dates)),"--",color="k", linewidth=3)
-                plt.ylabel("Total flux in region (Tg C hr${^-1}$)",fontsize=36)
-                plt.xlabel("Time",fontsize=36)
+                plt.plot(dates,Timeseries_plot_data[0],color="gray", linewidth=1)
+                plt.plot(dates,Timeseries_plot_data[1],color="brown", linewidth=1)
+                plt.plot(dates,Timeseries_plot_data[2],color="k", linewidth=1)
+                plt.plot(dates,Timeseries_plot_data[3],color="r", linewidth=1)
+                plt.plot(dates,Timeseries_plot_data[4],color="darkorchid", linewidth=1)
+                plt.plot(dates,Timeseries_plot_data[5],color="orange", linewidth=1)
+                plt.plot(dates, Timeseries_plot_data[6], color="blue", linewidth=1)
+                plt.plot(dates,np.zeros(len(dates)),"--",color="k", linewidth=1)
+                plt.ylabel("Total flux in region (Tg C hr${^-1}$)",fontsize=10)
+                plt.xlabel("Time",fontsize=10)
                 f1_ax1.xaxis.set_major_formatter(Month_Fmt)
-                plt.xticks(fontsize=36)
-                plt.yticks(fontsize=36)
-                plt.legend(runs,fontsize=36)
-                f1_ax1.tick_params(labelcolor='k', direction='in',length=10,width=4)
+                plt.xticks(fontsize=10)
+                plt.yticks(fontsize=10)
+                plt.legend(runs,fontsize=10, loc='best')
+                f1_ax1.tick_params(labelcolor='k', direction='in',length=2.5,width=1)
                 plt.grid()
+                plt.title(storm)
                 plt.show()
-                fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0}.png".format(storm));
+                #fig1.savefig(r"output\plots\\\Flux_timeseries_for_storm_{0}.png".format(storm));
 
                 
                 

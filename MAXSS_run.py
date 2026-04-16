@@ -4,9 +4,7 @@ Script for looping through the MAXSS storm-Atlas and running fluxengine
 
 @author: Richard Sims
 """
-
-    #### all functions and scripts imported here
-
+#Main script for running the FluxEngine TC simulations
 
 #fluxengine is installed here. 
 #C:\Users\rps207\Documents\Python\2021-Anaconda_install\Lib\site-packages\fluxengine
@@ -85,13 +83,51 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
         filedata = filedata.replace('windu10_moment2_temporalChunking = numberoftimesteps','windu10_moment2_temporalChunking ='+str(timestepsinfile))
 
-    # SST paths
-    if run_name=="MAXSS_RUN" or run_name=="SST_RUN":
+    # SST (with and without gradients) paths
+    if run_name=="MAXSS_RUN" or run_name=="SST_WITH_GRADIENTS_RUN" or run_name=="SST_NO_GRADIENTS_RUN":
+        # SST variable set up
         filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc')
         filedata = filedata.replace('sstfnd_temporalChunking = numberoftimesteps','sstfnd_temporalChunking ='+str(timestepsinfile))
+        
+        # pco2 variable set up
+        filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
+        filedata = filedata.replace('pgas_sw_temporalChunking = numberoftimesteps','pgas_sw_temporalChunking ='+str(timestepsinfile))
+
+        # pco2 SST variable set up
+        filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
+        filedata = filedata.replace('pco2_sst_temporalChunking = numberoftimesteps','pco2_sst_temporalChunking ='+str(timestepsinfile))
+
     else:
+        # SST variable set up
         filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc')
         filedata = filedata.replace('sstfnd_temporalChunking = numberoftimesteps','sstfnd_temporalChunking ='+str(timestepsinfile))
+        
+        # pco2 variable set up
+        filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
+        filedata = filedata.replace('pgas_sw_temporalChunking = numberoftimesteps','pgas_sw_temporalChunking ='+str(timestepsinfile))
+
+        # pco2 SST variable set up
+        filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
+        filedata = filedata.replace('pco2_sst_temporalChunking = numberoftimesteps','pco2_sst_temporalChunking ='+str(timestepsinfile))
+
+    # SST no gradients (turn off gradients)
+    #(Default in the config file is that gradients turned on, so we need to switch off for this run)
+    if run_name=="SST_NO_GRADIENTS_RUN" :
+        filedata = filedata.replace('sst_gradients = yes', 'sst_gradients = no')
+        filedata = filedata.replace('cool_skin_difference = 0.17', 'cool_skin_difference = 0')
+        filedata = filedata.replace('saline_skin_value = 0.1', 'saline_skin_value = 0')
+    
+    if run_name=="MAXSS_RUN" or run_name=="V_GAS_RUN":
+        # V_gas path
+        filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
+        filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
+        #update variable name
+        filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = V_gas')
+    else:
+        filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
+        filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
+        #update variable name
+        filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = V_gas')
     
     # salinity path
     if run_name=="MAXSS_RUN" or run_name=="SSS_RUN":
@@ -119,23 +155,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     else:
         filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc')
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
-
     
-    # xCO2 air path
-    filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
-    filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
-    #update variable name
-    filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = V_gas')
-    
-    # pco2 path
-    filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
-    filedata = filedata.replace('pgas_sw_temporalChunking = numberoftimesteps','pgas_sw_temporalChunking ='+str(timestepsinfile))
-
-    # pco2 SST path
-    filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
-    filedata = filedata.replace('pco2_sst_temporalChunking = numberoftimesteps','pco2_sst_temporalChunking ='+str(timestepsinfile))
-
-
     #output directory
     filedata = filedata.replace('output_dir = output/', 'output_dir ='+"output\\{3}\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm,run_name))
     #output file format
@@ -152,13 +172,9 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     #note that mask_timeDimensionName already set in config file template
     #mask_timeDimensionName = time
     
-    
-
     # Write the file out again
     with open(configfilenew, 'w') as file:
       file.write(filedata)
-      
-      
     return configfilenew;
 
 def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm_land_fraction):
@@ -315,7 +331,7 @@ if __name__ == "__main__":
         #define to loop through years
         MAXSS_years=year_list
         
-    #### Loop through the years in the MAXSS storm dataset 
+        #### Loop through the years in the MAXSS storm dataset 
         year_counter=0
         for year in MAXSS_years:
             #get a list of the storms
@@ -332,11 +348,11 @@ if __name__ == "__main__":
             MAXSS_storms=storm_list
             
             storm_counter=0
-        #### Loop through the storms for each year in the MAXSS storm dataset 
+            #### Loop through the storms for each year in the MAXSS storm dataset 
             for storm in MAXSS_storms:
                 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "ALEX", "COLIN", "MARIA", "BONNIE" ]): # "RINA"
+                if any(name in storm for name in ["ALEX", "BONNIE", "COLIN","MARIA"]): # , ,, "RINA"
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -364,7 +380,6 @@ if __name__ == "__main__":
                 elif region=="west-pacific":
                     region_id="WP"  
                                   
-               
                #### Need to add temporal chunking to config file
                 #- so need to open wind data to get that
                 # Use 'with' to ensure the wind file closes immediately after extracting metadata
@@ -386,18 +401,11 @@ if __name__ == "__main__":
             
                 #Set model start and end times            
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
-                #run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
-                run_endtime=wind_dates[96].strftime("%Y-%m-%d %H:%M")#
-                
-                #REMOVE THE ABOVE TEMP LINE OF CODE 
-                
-                ## TEMPORARY DEBUGGING TEST ##
-                
-                #run_startime= '2017-10-21 12:00'
-                #run_endtime= '2017-10-25 12:00'
-          
+                run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
+                #run_endtime=wind_dates[96].strftime("%Y-%m-%d %H:%M")#
+                # TEMPORARY LINE OF CODE ABOVE #
+    
                 #run_endtime=wind_dates[24].strftime("%Y-%m-%d %H:%M")# # TO ONLY RUN FOR one day
-                
 
                 #### Run flux engine for 'MAXSS run'
                 run_name="MAXSS_RUN"
@@ -409,7 +417,6 @@ if __name__ == "__main__":
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
-
                 #### Run flux engine for "REF run"
                 run_name="REF_RUN"
                 # create custom config file for this storm
@@ -420,7 +427,6 @@ if __name__ == "__main__":
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
-                
                 #### Run flux engine for "WIND run"
                 run_name="WIND_RUN"
                 # create custom config file for this storm
@@ -431,17 +437,35 @@ if __name__ == "__main__":
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_WIND_RUN,Hourlyfluxdate_WIND_RUN=get_spatially_integrated_flux(fe_WIND_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
-
-                #### Run flux engine for "SST run"
-                run_name="SST_RUN"
+                #### Run flux engine for "SST_with_gradients run"
+                run_name="SST_WITH_GRADIENTS_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_SST_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                configFilePath_SST_WITH_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                runStatus, fe_SST_RUN = run_fluxengine(configFilePath_SST_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                runStatus, fe_SST_WITH_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_WITH_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SST_RUN,Hourlyfluxdate_SST_RUN=get_spatially_integrated_flux(fe_SST_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_SST_WITH_GRADIENTS_RUN,Hourlyfluxdate_SST_WITH_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_WITH_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
+                #### Run flux engine for "SST_NO_gradients run"
+                run_name="SST_NO_GRADIENTS_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_SST_NO_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_SST_NO_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_NO_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_SST_NO_GRADIENTS_RUN,Hourlyfluxdate_SST_NO_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_NO_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+
+                #### Run flux engine for "SST_NO_gradients run"
+                run_name="V_GAS_RUN"
+                # create custom config file for this storm
+                # call custom function which copies file template and makes edits
+                configFilePath_V_GAS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                runStatus, fe_V_GAS_RUN = run_fluxengine(configFilePath_V_GAS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                #call function to get sum of hourly fluxes scaled by area.
+                Hourlyflux_V_GAS_RUN,Hourlyfluxdate_V_GAS_RUN=get_spatially_integrated_flux(fe_V_GAS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
                 #### Run flux engine for "SSS run"
                 run_name="SSS_RUN"
@@ -452,7 +476,6 @@ if __name__ == "__main__":
                 runStatus, fe_SSS_RUN = run_fluxengine(configFilePath_SSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_SSS_RUN,Hourlyfluxdate_SSS_RUN=get_spatially_integrated_flux(fe_SSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
-
             
                 #### Run flux engine for "PRESSURE run"
                 run_name="PRESSURE_RUN"
@@ -464,20 +487,15 @@ if __name__ == "__main__":
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_PRESSURE_RUN,Hourlyfluxdate_PRESSURE_RUN=get_spatially_integrated_flux(fe_PRESSURE_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
-                
-                #### Run flux engine for "PRECIPITATION run"
-                run_name="PRECIPITATION_RUN"
-                # create custom config file for this storm
-                # call custom function which copies file template and makes edits
-                configFilePath_PRECIPITATION_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
-                print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
-                runStatus, fe_PRECIPITATION_RUN = run_fluxengine(configFilePath_PRECIPITATION_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
-
+                # #### Run flux engine for "PRECIPITATION run"
+                # run_name="PRECIPITATION_RUN"
+                # # create custom config file for this storm
+                # # call custom function which copies file template and makes edits
+                # configFilePath_PRECIPITATION_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
+                # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
+                # runStatus, fe_PRECIPITATION_RUN = run_fluxengine(configFilePath_PRECIPITATION_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
+                # #call function to get sum of hourly fluxes scaled by area.
+                # Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
 
                 # Add to storm counter when everything is done.
                 storm_counter=storm_counter+1
-                
-
-
