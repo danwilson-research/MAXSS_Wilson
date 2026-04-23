@@ -26,6 +26,9 @@ friction_velocity_1_666 and sig_wv_ht_1_333
 @author: rps207
 """
 
+from fluxengine.core.rate_parameterisation import KCalculationBase
+from fluxengine.core.datalayer import DataLayer
+
 #Deike 2018
 class k_Deike2018(KCalculationBase):
     def __init__(self):

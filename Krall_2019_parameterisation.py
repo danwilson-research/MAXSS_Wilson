@@ -20,6 +20,9 @@ when applied in the open ocean.
 @author: rps207
 """
 
+from fluxengine.core.rate_parameterisation import KCalculationBase
+from fluxengine.core.datalayer import DataLayer
+
 class k_Krall2019(KCalculationBase):
     def __init__(self):
         self.name = self.__class__.__name__;
