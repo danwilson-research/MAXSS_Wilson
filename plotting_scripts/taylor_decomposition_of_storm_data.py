@@ -112,7 +112,7 @@ for region in MAXSS_regions:
                     plt.close()
 
                     # 2. Cumulative Bar Plot
-                    drv_labels = ['Wind', 'SST', 'SSS', 'V Gas', 'Pres', 'Taylor Sum', 'Actual']
+                    drv_labels = ['Wind', 'SST', 'SSS', 'V Gas', 'Pres', 'Taylor Sum', 'Actual Anomaly']
                     drv_values = [
                         wind_c[:last_idx].sum().item(),
                         sc['sst_c'][:last_idx].sum().item(),
