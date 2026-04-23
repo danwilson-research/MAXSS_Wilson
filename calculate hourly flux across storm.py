@@ -23,13 +23,14 @@ MAXSS_working_directory = "E:/MAXSS_working_directory"
 output_base = 'E:/MAXSS_working_directory/output/Spatially_integrated_fluxes'
 netcdf_output_root = path.join(MAXSS_working_directory, "output/Spatially_integrated_fluxes/maxss/storm-atlas/ibtracs")
 
+
 # The list of runs to process
 runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN", 
         "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
 
 # Regions and storms to process
 MAXSS_regions = ["north-atlantic"]
-storms_to_skip = [ ]  #ALEX, "BONNIE", "COLIN", "MARIA", "RINA"
+storms_to_skip = ["ALEX"]  #, "BONNIE", "COLIN", "MARIA", "RINA"
 
 # Use a dictionary to store data before converting to a wide CSV
 # Format: {(Storm, Year, Region): {Run1: Total, Run2: Total}}
@@ -80,6 +81,20 @@ for region in MAXSS_regions:
             if any(name in storm_name for name in storms_to_skip):
                 continue
             
+            land_fraction_path = path.join(MAXSS_working_directory, "maxss/storm-atlas/ibtracs/", region, year_name,storm_name,'Resampled_for_fluxengine_MAXSS_land_fraction.nc')
+            
+            #Load the land proportion mask
+            with xr.open_dataset(land_fraction_path) as lf_ds:
+                # Use .load() if the file is small to speed up indexing later
+                land_fraction = lf_ds.land_proportion.load() 
+
+            # Handle the FillValue (9.969e+36)
+            # Any value larger than 1.0 is clearly a mask/fill value. 
+            land_fraction = land_fraction.where(land_fraction <= 1.0, 1.0)
+
+            #Extract the water proportion
+            water_proportion = 1.0 - land_fraction
+            
             # Hold areas for the storm, calculated on the first componnent run found
             grid_areas = None
             
@@ -117,9 +132,16 @@ for region in MAXSS_regions:
                             # Select the specific hour (isel = index selection)
                             ds_hour = ds.isel(time=t_idx)
                             
+                            # Use .sel() to pick the land mask values that match the 
+                            # moving window's current lat/lon coordinates.
+                            current_water_map = water_proportion.sel(
+                                latitude=ds_hour.latitude, 
+                                longitude=ds_hour.longitude, 
+                                method="nearest")
+                            
                             # Calculate mass for THIS hour
-                            # (g/m2/day) * area * (1/24) = grams in this hour
-                            hourly_mass_map = ds_hour.OF * grid_areas * (1.0 / 24.0)
+                            # (g/m2/day) * area * (1/24) * ocean proportion in cell = grams in this hour
+                            hourly_mass_map = ds_hour.OF * grid_areas * (1.0 / 24.0) * current_water_map
                             
                             # Sum across space for this specific hour
                             hour_total_grams = float(hourly_mass_map.sum(skipna=True))
