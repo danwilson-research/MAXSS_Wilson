@@ -143,11 +143,23 @@ for region in MAXSS_regions:
                     plt.close()
 
                 # Save Data to CSV list
+                # We calculate the sums once here to keep the dictionary clean
                 all_storm_data.append({
-                    'Storm_ID': storm_id, 'Year': year_name,
-                    'Actual_TgC': total_anomaly[:last_idx].sum().item(),
-                    'Sum_SSTNoGrad_TgC': taylor_sum_no_g[:last_idx].sum().item(),
-                    'Sum_SSTWithGrad_TgC': taylor_sum_with_g[:last_idx].sum().item()
+                    'Storm_ID': storm_id, 
+                    'Year': year_name,
+                    'Region': region,
+                    # Individual Drivers (Common to both methods)
+                    'Wind_Contribution_TgC': wind_c[:last_idx].sum().item(),
+                    'SSS_Contribution_TgC': sss_c[:last_idx].sum().item(),
+                    'VGas_Contribution_TgC': vgas_c[:last_idx].sum().item(),
+                    'Pressure_Contribution_TgC': pres_c[:last_idx].sum().item(),
+                    # SST Specific Drivers
+                    'SST_NoGrad_Contribution_TgC': sst_no_g_c[:last_idx].sum().item(),
+                    'SST_WithGrad_Contribution_TgC': sst_with_g_c[:last_idx].sum().item(),
+                    # Totals and Verification
+                    'Actual_Anomaly_TgC': total_anomaly[:last_idx].sum().item(),
+                    'Taylor_Sum_NoGrad_TgC': taylor_sum_no_g[:last_idx].sum().item(),
+                    'Taylor_Sum_WithGrad_TgC': taylor_sum_with_g[:last_idx].sum().item()
                 })
                 
             except FileNotFoundError:
