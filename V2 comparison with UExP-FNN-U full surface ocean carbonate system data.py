@@ -19,8 +19,9 @@ import os
 import pandas as pd
 from os import path
 from glob import glob
+import matplotlib.pyplot as plt
 
-#NEED TO ACCOUNT FOR LAND PROPORTION IN FLUXENGINE AND DAN F DATA
+#NEED TO ACCOUNT FOR LAND PROPORTION IN FLUXENGINE AND DAN F DATA ##
 
 # --- CONFIGURATION ---
 MAXSS_working_directory = "E:/MAXSS_working_directory"
@@ -153,20 +154,54 @@ if summary_data:
 else:
     print("No data was processed.")
                         
-                        
-                        ADD CODE TO COLLECT TOTALS BOTH FROM ONE STORM AND EACH STORM AS A WHOLE - OUTPUTTING TO CSV FILES
-                        INCLUDE STORM ID, BASIN ect.
-                        
-                        ALSO DOUBLE CHECK I KNOW WHAT MISSING AREA IS SHOWING AND COMPARE TO PREVIOUS PLOTS
-                        
-                        
-                        #Following block of code used to sanity check 
-                        
-                        test = uexp_final.data
-                        print('uexp' + str(np.nansum(test)))
-                        
-                        test1 = fe_final.data
-                        print('FE' + str(np.nansum(test1)))
+             
+#Plot comparison bar chart per storm between UEXP and FluxEngine               
+             
+# 1. Extract just the storm name (the part after the last underscore)
+# This creates a list of strings like ['ALEX', 'BONNIE', 'COLIN', ...]
+clean_names = [name.split('_')[-1] for name in df['storm_name']]
+
+# 2. Setup the data positions
+x = np.arange(len(clean_names)) 
+width = 0.35 
+
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# 3. Create the grouped bars
+rects1 = ax.bar(x - width/2, df['total_fe_tg'], width, label='FluxEngine', color='#3498db')
+rects2 = ax.bar(x + width/2, df['total_uexp_tg'], width, label='UEXP-FNN', color='#e74c3c')
+
+# 4. Customizing the labels
+ax.set_ylabel('Total Gas (tg)')
+ax.set_title('Comparison of Total FluxEngine vs UEXP ')
+
+# Use the cleaned names for the x-axis ticks
+ax.set_xticks(x)
+ax.set_xticklabels(clean_names) 
+
+ax.legend()
+ax.grid(axis='y', linestyle='--', alpha=0.6)
+
+fig.tight_layout()
+
+plt.show()          
+                
+             
+                
+             
+                
+
+
+ALSO DOUBLE CHECK I KNOW WHAT MISSING AREA IS SHOWING AND COMPARE TO PREVIOUS PLOTS
+
+
+#Following block of code used to sanity check 
+
+test = uexp_final.data
+print('uexp' + str(np.nansum(test)))
+
+test1 = fe_final.data
+print('FE' + str(np.nansum(test1)))
             
                 
                 
