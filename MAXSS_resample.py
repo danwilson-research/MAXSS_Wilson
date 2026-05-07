@@ -1665,7 +1665,7 @@ if __name__ == "__main__":
                 var = ncout.createVariable("V_gas", float, ("time","lat", "lon"), fill_value=vgas_fill,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "micromol mol-1";
-                var.long_name = "Concentration CO2 in dry air (ppm) or dry molecular fraction of CO2 in the atmosphere (umol mol-1)";
+                var.long_name = "Monthly dry molecular fraction of CO2 in the atmosphere (umol mol-1) resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = conc_pco2_air_on_wind_grid;
                 
                 #data variables
