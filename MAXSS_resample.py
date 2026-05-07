@@ -1751,7 +1751,7 @@ if __name__ == "__main__":
                 var = ncout.createVariable("V_gas", float, ("time","lat", "lon"), fill_value=vgas_fill,
                                            zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension));
                 var.units = "micromol mol-1";
-                var.long_name = "Dynamic Pre-storm (15-13 days) median of concentration CO2 in dry air (ppm) or dry molecular fraction of CO2 in the atmosphere (umol mol-1)";
+                var.long_name = "Dynamic Pre-storm (15-13 days) median dry molecular fraction of CO2 in the atmosphere (umol mol-1)";
                 var[:] = v_gas_on_wind_grid_prestormref;
                 
                 var = ncout.createVariable("reynolds_temperature_mean", float, ("time","lat", "lon"), fill_value=sst_fill,
