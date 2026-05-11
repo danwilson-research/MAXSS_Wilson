@@ -8,3 +8,4 @@ better account for high speed winds.
 
 ## Authors
 Daniel wilson, Daniel Ford and Jamie Shutler building on code initially written by Richard Sims
+
