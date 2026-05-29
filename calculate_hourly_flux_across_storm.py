@@ -223,4 +223,3 @@ def calc_hourly_flux(MAXSS_working_directory,output_base,netcdf_output_root,runs
     else:
         print("\nNo data was processed. Check your directory paths.")
 
-if

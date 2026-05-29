@@ -28,6 +28,7 @@ from datetime import datetime, timedelta;
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from pyproj import Geod # use pyproj as it is documented code
+import argparse #so we can run this code from bash script
 
 import inspect;
 Month_Fmt = mdates.DateFormatter('%b %d')
@@ -43,7 +44,7 @@ def get_datetimes(secondsSince1970):
     base = datetime(1970,1,1);
     return np.array([base+timedelta(seconds=int(t)) for t in secondsSince1970]);
 
-def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf"): #
+def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf"): #
     #DJF 09/05/2026: Added the configfiletemplate as a function input so it can be modified by the main function
 
     # if it doesn't exist make directory for config files
@@ -414,7 +415,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="MAXSS_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_MAXSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_MAXSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_MAXSS_RUN = run_fluxengine(configFilePath_MAXSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -424,7 +425,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="REF_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -434,7 +435,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="WIND_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_WIND_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_WIND_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_WIND_RUN = run_fluxengine(configFilePath_WIND_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -444,7 +445,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="SST_WITH_GRADIENTS_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_SST_WITH_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_SST_WITH_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SST_WITH_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_WITH_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -454,7 +455,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="SST_NO_GRADIENTS_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_SST_NO_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_SST_NO_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SST_NO_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_NO_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -464,7 +465,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="V_GAS_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_V_GAS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_V_GAS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_V_GAS_RUN = run_fluxengine(configFilePath_V_GAS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -474,7 +475,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="SSS_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_SSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_SSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SSS_RUN = run_fluxengine(configFilePath_SSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
@@ -484,7 +485,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 run_name="PRESSURE_RUN"
                 # create custom config file for this storm
                 # call custom function which copies file template and makes edits
-                configFilePath_PRESSURE_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,configfiletemplate)
+                configFilePath_PRESSURE_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_PRESSURE_RUN = run_fluxengine(configFilePath_PRESSURE_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.

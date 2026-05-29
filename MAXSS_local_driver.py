@@ -10,6 +10,7 @@ Driver script for running the MAXSS analysis locally
 import MAXSS_resample as re
 import MAXSS_run as ru
 import calculate_hourly_flux_across_storm as c_flux
+from os import path
 
 MAXSS_working_directory = "E:/MAXSS_working_directory"
 downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux"
@@ -20,12 +21,12 @@ runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
         "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
 MAXSS_regions = ["north-atlantic"]
 
-storms_to_skip = ["ALEX"]
+storms_to_skip = ["RINA", "BONNIE",  "MARIA", "ALEX","COLIN"] #"COLIN",
 
 verbose = True
 
-re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot)
+#re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, storms_to_skip)
 
-ru.MAXSS_flux_run(MAXSS_working_directory,configfiletemplate,verbose)
+#ru.MAXSS_flux_run(MAXSS_working_directory,configfiletemplate,verbose)
 
-c_flux.calc_hourly_flux(MAXSS_working_directory,output_base,netcdf_output_root,runs,MAXSS_regions,storms_to_skip):
+#c_flux.calc_hourly_flux(MAXSS_working_directory,output_base,netcdf_output_root,runs,MAXSS_regions,storms_to_skip)

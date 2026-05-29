@@ -33,7 +33,7 @@ import datetime
 import argparse #DJF 09/05/2026: So we can add code to allow this to run from a bash script
 
 
-def process_slice(valData, errData, outputRes=0.25):
+def process_slice(valData, errData,wind_lat_dimension, wind_lon_dimension, min_lon, max_lon, min_lat, max_lat, iCoordMeshes, outputRes=0.25):
 
     #Handle masked values explicitly to avoid masked element to nan error
     valData = valData.filled(fill_value=np.nan)
@@ -61,7 +61,9 @@ def process_slice(valData, errData, outputRes=0.25):
 
 
 # if __name__ == "__main__": # DJF: 09/05/2026: Turning the _main_ into a function
-def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux"): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
+def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", storms_to_skip=[]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
+
+
     """
     Function to run the MAXSS resampling script and allowing it to be callable.
 
@@ -123,7 +125,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
             for storm in MAXSS_storms:
 
                 ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in [ "RINA" ]): #BONNIE", "COLIN", "MARIA", "ALEX"
+                if any(name in storm for name in storms_to_skip): #BONNIE", "COLIN", "MARIA", "ALEX"
                     print(f"Skipping storm: {storm}")
                     storm_counter += 1 # Important: increment the counter before skipping
                     continue
@@ -650,7 +652,11 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                     #print(sst_timesteps)
                     sst_time_slice=sst_nc.variables['__eo_analysed_sst'][sst_timesteps,:,:]
                     sst_uncertainty_slice=sst_nc.variables['__eo_analysed_sst_uncertainty'][sst_timesteps,:,:]
-                    newVals, newCountCount, newValsErr = process_slice(sst_time_slice, sst_uncertainty_slice);
+                    #newVals, newCountCount, newValsErr = process_slice(sst_time_slice, sst_uncertainty_slice);
+                    
+                    newVals, newCountCount, newValsErr = process_slice(sst_time_slice, sst_uncertainty_slice, 
+                        wind_lat_dimension, wind_lon_dimension, min_lon, max_lon, min_lat, max_lat, iCoordMeshes)
+                    
 
                     sst_regrid_Vals[sst_timesteps,:,:] = newVals;
                     sst_regrid_ValsErr[sst_timesteps,:,:] = newValsErr;
@@ -838,7 +844,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                     #print(sss_timesteps)
                     sss_time_slice=sss_nc.variables['__eo_sss'][sss_timesteps,:,:]
                     sss_uncertainty_slice=sss_nc.variables['__eo_sss_random_error'][sss_timesteps,:,:]
-                    newVals, newCountCount, newValsErr = process_slice(sss_time_slice, sss_uncertainty_slice);
+                    newVals, newCountCount, newValsErr = process_slice(sss_time_slice, sss_uncertainty_slice, 
+                        wind_lat_dimension, wind_lon_dimension, min_lon, max_lon, min_lat, max_lat, iCoordMeshes);
 
                     #regridding results in some empty tracks
                     x_coord_range = wind_lon.tolist()
