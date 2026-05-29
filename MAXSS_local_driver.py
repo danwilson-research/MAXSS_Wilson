@@ -21,17 +21,15 @@ runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
         "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
 MAXSS_regions = ["north-atlantic"]
 
-storms_to_skip = ["RINA", "BONNIE",  "MARIA", "ALEX","COLIN"] #"COLIN",
-
 verbose = True
 
 #Specify which storms you would like to run # if no storms specified, all storms run
-specified_storms = [] #"AL052010_"
+specified_storms = ["DANIELLE"] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
 
 #When set to True, only MAXSS_main run is computed and only first 10 days modelled.
 #test_run = True
 
-#re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, storms_to_skip)
+re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, specified_storms)
 
 ru.MAXSS_flux_run(MAXSS_working_directory,configfiletemplate,verbose,specified_storms)
 

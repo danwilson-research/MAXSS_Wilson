@@ -61,7 +61,7 @@ def process_slice(valData, errData,wind_lat_dimension, wind_lon_dimension, min_l
 
 
 # if __name__ == "__main__": # DJF: 09/05/2026: Turning the _main_ into a function
-def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", storms_to_skip=[]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
+def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", specified_storms=[]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
 
 
     """
@@ -124,11 +124,15 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
             #### Loop through the storms for each year in the MAXSS storm dataset
             for storm in MAXSS_storms:
 
-                ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in storms_to_skip): #BONNIE", "COLIN", "MARIA", "ALEX"
-                    print(f"Skipping storm: {storm}")
-                    storm_counter += 1 # Important: increment the counter before skipping
-                    continue
+                # 1. If specified_storms has entries, check if ANY of your fragments match the storm name.
+                if len(specified_storms) > 0:
+                    # This checks if NONE of the fragments are inside the storm string
+                    if not any(fragment in storm for fragment in specified_storms):
+                        print(f"Skipping storm (no fragment match): {storm}")
+                        storm_counter += 1  # Crucial: keep your tracking counter synchronized!
+                        continue
+                    
+                print(f"--> Processing storm: {storm}")
 
                 #directory for storm being processes
                 storm_dir=storm_directory_list[storm_counter]
