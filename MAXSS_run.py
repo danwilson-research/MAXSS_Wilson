@@ -300,7 +300,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
 
 
 # if __name__ == "__main__":
-def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf",verbose = True):
+def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf",verbose = True, specified_storms = []):
     # verbose=True
     #### Get the path of the root directory where the data are stored.
     #This will be user specific and can be changed depening on where data is stored
@@ -348,18 +348,22 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
             storm_directory_list=glob(year_directory_list[year_counter]+"/*/", recursive = True)
             year_counter=year_counter+1
 
-            #define to loop through years
+            
             MAXSS_storms=storm_list
-
+                
             storm_counter=0
             #### Loop through the storms for each year in the MAXSS storm dataset
             for storm in MAXSS_storms:
 
-                ## --- REMOVE SECTION ONCE TESTING COMPLETE --- ##
-                if any(name in storm for name in ["ALEX", "BONNIE", "COLIN","MARIA"]): # , ,, "RINA"
-                    print(f"Skipping storm: {storm}")
-                    storm_counter += 1 # Important: increment the counter before skipping
-                    continue
+                # 1. If specified_storms has entries, check if ANY of your fragments match the storm name.
+                if len(specified_storms) > 0:
+                    # This checks if NONE of the fragments are inside the storm string
+                    if not any(fragment in storm for fragment in specified_storms):
+                        print(f"Skipping storm (no fragment match): {storm}")
+                        storm_counter += 1  # Crucial: keep your tracking counter synchronized!
+                        continue
+                    
+                print(f"--> Processing storm: {storm}")
 
                 #directory for storm being processes
                 storm_dir=storm_directory_list[storm_counter]

@@ -25,8 +25,14 @@ storms_to_skip = ["RINA", "BONNIE",  "MARIA", "ALEX","COLIN"] #"COLIN",
 
 verbose = True
 
+#Specify which storms you would like to run # if no storms specified, all storms run
+specified_storms = [] #"AL052010_"
+
+#When set to True, only MAXSS_main run is computed and only first 10 days modelled.
+#test_run = True
+
 #re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, storms_to_skip)
 
-#ru.MAXSS_flux_run(MAXSS_working_directory,configfiletemplate,verbose)
+ru.MAXSS_flux_run(MAXSS_working_directory,configfiletemplate,verbose,specified_storms)
 
 #c_flux.calc_hourly_flux(MAXSS_working_directory,output_base,netcdf_output_root,runs,MAXSS_regions,storms_to_skip)
