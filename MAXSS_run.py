@@ -300,7 +300,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
 
 
 # if __name__ == "__main__":
-def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf",verbose = True, specified_storms = []):
+def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf",verbose = True, specified_storms = [], test_run = False):
     # verbose=True
     #### Get the path of the root directory where the data are stored.
     #This will be user specific and can be changed depening on where data is stored
@@ -388,7 +388,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 elif region=="west-pacific":
                     region_id="WP"
 
-               #### Need to add temporal chunking to config file
+                #### Need to add temporal chunking to config file
                 #- so need to open wind data to get that
                 # Use 'with' to ensure the wind file closes immediately after extracting metadata
                 with nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc".format(region,year,storm))) as winds_nc:
@@ -403,17 +403,21 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
 
                     time_chunk_val = str(len(wind_time))
 
-                #Extract the land fraction
+                # Extract the land fraction
                 with nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_land_fraction.nc".format(region,year,storm))) as land_fraction_nc:
                     storm_land_fraction = land_fraction_nc.variables['land_proportion'][0]
 
-                #Set model start and end times
+                # Set model start and end times
                 run_startime=wind_dates[0].strftime("%Y-%m-%d %H:%M")#
-                run_endtime=wind_dates[-1].strftime("%Y-%m-%d %H:%M")#
-                #run_endtime=wind_dates[96].strftime("%Y-%m-%d %H:%M")#
-                # TEMPORARY LINE OF CODE ABOVE #
-
-                #run_endtime=wind_dates[24].strftime("%Y-%m-%d %H:%M")# # TO ONLY RUN FOR one day
+                
+                # Check to see if this is a test run or full run
+                if test_run:
+                    # 5 days = 120 hourly steps. Cap at max available steps if storm is shorter than 5 days.
+                    test_index = min(120, len(wind_dates) - 1)
+                    run_endtime = wind_dates[test_index].strftime("%Y-%m-%d %H:%M")
+                    print(f"[TEST RUN ACTIVE]: Restricting model timeframe to 5 days ({run_startime} to {run_endtime})")
+                else:
+                    run_endtime = wind_dates[-1].strftime("%Y-%m-%d %H:%M")
 
                 #### Run flux engine for 'MAXSS run'
                 run_name="MAXSS_RUN"
@@ -424,6 +428,11 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 runStatus, fe_MAXSS_RUN = run_fluxengine(configFilePath_MAXSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
                 Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+
+                # Code to exit if test model run
+                if test_run:
+                    print(f"[TEST RUN COMPLETE]: Successfully verified 'MAXSS_RUN' for {storm}. Exiting storm loop as requested.")
+                    break  # <--- This completely drops out of the "for storm in MAXSS_storms" loop
 
                 #### Run flux engine for "REF run"
                 run_name="REF_RUN"
