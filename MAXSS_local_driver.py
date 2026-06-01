@@ -4,7 +4,7 @@
 Driver script for running the MAXSS analysis locally
 
 @Original author: Daniel Ford
-
+@Editing author: Daniel Wilson
 """
 
 import MAXSS_resample as re
