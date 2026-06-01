@@ -98,21 +98,19 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
         #define to loop through years
         MAXSS_years=year_list
 
-        #### Loop through the years in the MAXSS storm dataset
-        year_counter=0
-        for year in MAXSS_years:
-            #get a list of the storms
+        #### Loop through the years and their directory paths simultaneously
+        # zip() pairs up year_list ["2010", "2011"] with year_directory_list ["/path/2010", "/path/2011"]
+        for year, current_year_dir in zip(MAXSS_years, year_directory_list):
+            
+            # Make a list of the storm folder names
             storm_list = []
-            for entry_name in os.listdir(year_directory_list[year_counter]):
-                entry_path = path.join(year_directory_list[year_counter], entry_name)
+            for entry_name in os.listdir(current_year_dir):
+                entry_path = path.join(current_year_dir, entry_name)
                 if path.isdir(entry_path):
                     storm_list.append(entry_name)
-            
-            #get a list of the paths for each year folder
-            storm_directory_list=glob(year_directory_list[year_counter]+"/*/", recursive = True)
-            
-            
-            year_counter=year_counter+1
+
+            # Build storm directory list
+            storm_directory_list = [os.path.join(current_year_dir, storm) for storm in storm_list]
 
             #define to loop through years
             MAXSS_storms=storm_list
