@@ -83,8 +83,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
     for region in MAXSS_regions:
 
         #define the directory for the region
-        region_directory = path.join(MAXSS_working_directory+"\\maxss\\storm-atlas\\ibtracs\\{0}".format(region));
-
+        region_directory = os.path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region)
         #look for the year subfolders
 
         #get a list of the years
@@ -94,7 +93,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
             if path.isdir(entry_path):
                 year_list.append(entry_name)
         #get a list of the paths for each year folder
-        year_directory_list=glob(region_directory+"/*/", recursive = True)
+        year_directory_list = [os.path.join(region_directory, year) for year in year_list]
 
         #define to loop through years
         MAXSS_years=year_list
@@ -108,8 +107,11 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 entry_path = path.join(year_directory_list[year_counter], entry_name)
                 if path.isdir(entry_path):
                     storm_list.append(entry_name)
+            
             #get a list of the paths for each year folder
             storm_directory_list=glob(year_directory_list[year_counter]+"/*/", recursive = True)
+            
+            
             year_counter=year_counter+1
 
             #define to loop through years
