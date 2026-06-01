@@ -157,7 +157,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
 
                 #### load L4 Wind data
-                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
+                winds_nc = nc.Dataset(os.path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, 
+                                                   f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_MAXSS_HIST_TC_L4.nc"))
 
                 # 1. Extract the required variables from the NetCDF file
                 spatial_mask = winds_nc.variables['data_spatial_mask'][:]
@@ -383,7 +384,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 max_lon=wind_lon[0-1]
 
                 #5. set up netcdf
-                processedFilePath = (path.join(f"maxss\\storm-atlas\\ibtracs\\{region}\\{year}\\{storm}\\Resampled_for_fluxengine_storm_timings_with_masks.nc"))
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_storm_timings_with_masks.nc")
+                
                 ncout = Dataset(processedFilePath, 'w')
 
                 # 6. Define Dimensions
@@ -473,7 +475,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                     wind_moment2 = np.nan_to_num(wind_moment2, nan=fill_value).astype('float32')
 
                 # save wind speed to netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc".format(region,year,storm)));
+                path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_L4_windspeed.nc")
 
                 ncout = Dataset(processedFilePath, 'w');
 
@@ -552,7 +554,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 wind_moment2_prestormref_3d = np.nan_to_num(wind_moment2_prestormref_3d, nan=fill_value).astype('float32')
 
                 # 7. Save wind pre-storm output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc".format(region,year,storm)))
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc")
 
                 ncout = Dataset(processedFilePath, 'w')
 
