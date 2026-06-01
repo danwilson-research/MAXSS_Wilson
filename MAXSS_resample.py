@@ -75,14 +75,9 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
     #This will be user specific and can be changed depening on where data is stored
     # MAXSS_working_directory = "E:/MAXSS_working_directory"; #DJF 09/05/2026: this is now brought in wiht the function arguements
 
-
     #note to use the same file structure used by the project r.g. #maxss/storm-atlas/ibtracts/region/year/storm
     os.chdir(MAXSS_working_directory);
     print("Working directory is now:", os.getcwd());
-
-    # #list of all the basins in MAXSS
-    # #MAXSS_regions=["east-pacific","north-atlantic","north-indian","south-atlantic","south-indian","south-pacific","west-pacific"]
-    # MAXSS_regions=["north-atlantic"]
 
     #### Loop through the regions in MAXSS storm dataset
     for region in MAXSS_regions:
