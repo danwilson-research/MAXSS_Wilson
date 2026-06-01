@@ -61,7 +61,7 @@ def process_slice(valData, errData,wind_lat_dimension, wind_lon_dimension, min_l
 
 
 # if __name__ == "__main__": # DJF: 09/05/2026: Turning the _main_ into a function
-def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", specified_storms=[]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
+def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", specified_storms = [], MAXSS_regions = ["north-atlantic"]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
 
 
     """
@@ -80,9 +80,9 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
     os.chdir(MAXSS_working_directory);
     print("Working directory is now:", os.getcwd());
 
-    #list of all the basins in MAXSS
-    #MAXSS_regions=["east-pacific","north-atlantic","north-indian","south-atlantic","south-indian","south-pacific","west-pacific"]
-    MAXSS_regions=["north-atlantic"]
+    # #list of all the basins in MAXSS
+    # #MAXSS_regions=["east-pacific","north-atlantic","north-indian","south-atlantic","south-indian","south-pacific","west-pacific"]
+    # MAXSS_regions=["north-atlantic"]
 
     #### Loop through the regions in MAXSS storm dataset
     for region in MAXSS_regions:
