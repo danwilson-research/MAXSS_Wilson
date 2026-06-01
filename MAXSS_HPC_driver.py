@@ -1,3 +1,12 @@
+"""
+
+Driver script for running the MAXSS analysis locally
+
+@Author: Daniel Wilson, based on teomplate from Daniel Ford
+
+"""
+
+
 import MAXSS_resample as re
 import MAXSS_run as ru
 import calculate_hourly_flux_across_storm as c_flux

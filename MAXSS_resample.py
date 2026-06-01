@@ -115,27 +115,26 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
             #define to loop through years
             MAXSS_storms=storm_list
 
-            storm_counter=0
-            #### Loop through the storms for each year in the MAXSS storm dataset
-            for storm in MAXSS_storms:
+            #### Loop through the storms and their directory paths simultaneously using zip()
+            for storm, current_storm_dir in zip(MAXSS_storms, storm_directory_list):
 
-                # 1. If specified_storms has entries, check if ANY of your fragments match the storm name.
+                # If specified_storms has entries, check if ANY of your fragments match the storm name.
                 if len(specified_storms) > 0:
                     # This checks if NONE of the fragments are inside the storm string
                     if not any(fragment in storm for fragment in specified_storms):
                         print(f"Skipping storm (no fragment match): {storm}")
-                        storm_counter += 1  # Crucial: keep your tracking counter synchronized!
-                        continue
-                    
+                        continue  # No manual counters to update anymore! Safe and clean.
+
                 print(f"--> Processing storm: {storm}")
 
-                #directory for storm being processes
-                storm_dir=storm_directory_list[storm_counter]
+                # Directory for storm being processed
+                storm_dir = current_storm_dir
+                
                 #directory for storm being processes relative to current working directory
-                storm_dir_relative = path.join("\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm));
-                #output directory
-                output_location=path.join(MAXSS_working_directory+"\\output\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm))
-
+                storm_dir_relative = os.path.join("maxss", "storm-atlas", "ibtracs", region, year, storm)
+                
+                output_location = os.path.join(MAXSS_working_directory, "output", "maxss", "storm-atlas", "ibtracs", region, year, storm)
+                
                 #### regrid data for this storm
 
                 # need to get the identifier from the storm name as it is used in .nc file string
