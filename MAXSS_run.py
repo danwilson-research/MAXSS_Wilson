@@ -215,7 +215,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
     #The total flux is then the sum of these fluxes
 
     # Get all files and directories ending with .nc
-    Fe_oututfile_list = glob(os.path.join(fe.runParams.output_dir, "*.nc"))
+    Fe_outputfile_list = glob(os.path.join(fe.runParams.output_dir, "*.nc"))
 
     #get the temporal resolution from the fluxengine
     #turn it into hours
@@ -228,9 +228,9 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
     Storm_time_hourly=[]
 
     #loop through netCDF files
-    for fluxfile_number in range(0, len(Fe_oututfile_list)):
+    for fluxfile_number in range(0, len(Fe_outputfile_list)):
         #Load using with so that .nc file automatically closed after use
-        with nc.Dataset(Fe_oututfile_list[fluxfile_number]) as flux_nc:
+        with nc.Dataset(Fe_outputfile_list[fluxfile_number]) as flux_nc:
 
             #load in the flux data
             Flux_data=flux_nc.variables['OF'][:,:] #DOES THIS NEED CHANGING? [:] (Appeared not to impact results)
