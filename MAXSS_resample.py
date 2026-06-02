@@ -475,7 +475,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                     wind_moment2 = np.nan_to_num(wind_moment2, nan=fill_value).astype('float32')
 
                 # save wind speed to netCDF
-                path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_L4_windspeed.nc")
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_L4_windspeed.nc")
 
                 ncout = Dataset(processedFilePath, 'w');
 
@@ -610,7 +610,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
                 ## MAXSS ESACCI SST data ##
                 # load data
-                sst_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_OSTIA-C3S-L4-GLOB-v2.1.nc".format(region,year,storm,region_id,storm_id)));
+                sst_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_OSTIA-C3S-L4-GLOB-v2.1.nc"))
+
                 #sst = sst_nc.variables['__eo_analysed_sst'][:]
                 sst_lat = sst_nc.variables['lat'][:]
                 sst_lon = sst_nc.variables['lon'][:]
@@ -688,8 +689,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 sst_on_wind_grid = np.nan_to_num(sst_on_wind_grid, nan=sst_fill_value).astype('float32')
 
                 # save SST output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc".format(region,year,storm)));
-
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -749,8 +750,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 sst_on_wind_grid_prestormref = np.nan_to_num(sst_on_wind_grid_prestormref, nan=sst_fill_value).astype('float32')
 
                 # 7. Save SST pre storm median into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc".format(region,year,storm)));
-
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -803,7 +804,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
                 ## MAXSS ESACCI SSS data ##
                 # 1. load data
-                sss_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ESACCI-SEASURFACESALINITY-L4-SSS-MERGED_OI_7DAY_RUNNINGMEAN_DAILY_25km.nc".format(region,year,storm,region_id,storm_id)));
+                sss_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_ESACCI-SEASURFACESALINITY-L4-SSS-MERGED_OI_7DAY_RUNNINGMEAN_DAILY_25km.nc"))
+                                    
                 #sss = sss_nc.variables['__eo_sss'][:]
                 sss_lat = sss_nc.variables['lat'][:]
                 sss_lon = sss_nc.variables['lon'][:]
@@ -913,7 +915,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 sss_on_wind_grid = np.nan_to_num(sss_on_wind_grid, nan=sss_fill_value).astype('float32')
 
                 # 9. Save SSS output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SSS.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_ESACCI_SSS.nc")
+   
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -971,7 +974,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 sss_on_wind_grid_prestormref = np.nan_to_num(sss_on_wind_grid_prestormref, nan=sss_fill_value).astype('float32')
 
                 # 7. save SSS output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ESACCI_SSS_pre_storm_reference.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_ESACCI_SSS_pre_storm_reference.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -1028,8 +1032,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 #Note this resample code assumes precipitation is on the same grid spatial and temporal grid as the wind
 
                 # 1. load data
-                precip_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_Precipitation.nc".format(region,year,storm,region_id,storm_id)))
-
+                precip_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs",region, year, storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_ERA5_Precipitation.nc"))
+                    
                 p_lat = precip_nc.variables['lat'][:]
                 p_lon = precip_nc.variables['lon'][:]
                 p_time = precip_nc.variables['time'][:]
@@ -1114,7 +1118,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 precip_on_wind_grid = np.nan_to_num(precip_on_wind_grid, nan=precip_fill_value).astype('float32')
 
                 # 10. Save precipitation pre storm output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas","ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -1184,7 +1189,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 precip_on_wind_grid_prestormref = np.nan_to_num(precip_on_wind_grid_prestormref, nan=precip_fill_value).astype('float32')
 
                 # 7. save precipitation output to a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm,"Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -1234,7 +1240,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
                 ## MAXSS ERA5 pressure data ##
                 # 1. load data
-                pressure_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_ERA5_SLP.nc".format(region,year,storm,region_id,storm_id)));
+                pressure_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region,year,storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_ERA5_SLP.nc"))
+                
                 pressure_lat = pressure_nc.variables['lat'][:]
                 pressure_lon = pressure_nc.variables['lon'][:]
                 pressure_time = pressure_nc.variables['time'][:]
@@ -1287,7 +1294,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 pressure_on_wind_grid = np.nan_to_num(pressure_on_wind_grid, nan=pressure_fill_value).astype('float32')
 
                 # 8. Save pressure pre storm output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region,year,storm, "Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc")
 
                 ncout = Dataset(processedFilePath, 'w');
 
@@ -1356,7 +1363,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 pressure_on_wind_grid_prestormref = np.nan_to_num(pressure_on_wind_grid_prestormref, nan=pressure_fill_value).astype('float32')
 
                 # 7. Save pressure output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_ERA5_pressure_pre_storm_reference.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region,year,storm, "Resampled_for_fluxengine_MAXSS_ERA5_pressure_pre_storm_reference.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 # create dataset and provide dimensions
@@ -1410,10 +1418,12 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
                 ## MAXSS Land fraction ##
                 # create dataset and provide dimensions
-                winds_nc = nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\MAXSS_HIST_TC_{3}_{1}_{4}_MAXSS_HIST_TC_L4.nc".format(region,year,storm,region_id,storm_id)));
+                winds_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_MAXSS_HIST_TC_L4.nc"))
+                
                 wind_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
 
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_land_fraction.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_land_fraction.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
 
                 ncout.createDimension("latitude", wind_lat_dimension);
@@ -1452,8 +1462,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 month_abbrs = [calendar.month_name[i][:3].lower() for i in range(1, 13)]
 
                 # 3. set up download file template
-                downloaded_file_template = Template(
-                    path.join(downloadedRoot, "${YYYY}", "${MM}", "OceanFluxGHG-month${MM}-${MMM}-${YYYY}-v0.nc"))
+                downloaded_file_template = Template(path.join(downloadedRoot, "${YYYY}", "${MM}", "OceanFluxGHG-month${MM}-${MMM}-${YYYY}-v0.nc"))
 
                 # 4. DEFINE TARGET REGION
                 # wind_lon your original -180 to 180 array.
@@ -1649,7 +1658,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 gc.collect()
 
                 # 9. save pco2 output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_Ford_et_al_pco2.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_Ford_et_al_pco2.nc")
+                
                 ncout = Dataset(processedFilePath, 'w');
                 # create dataset and provide dimensions
 
@@ -1736,10 +1746,10 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 reynolds_temp_on_wind_grid_prestormref = np.nan_to_num(reynolds_temp_on_wind_grid_prestormref, nan=sst_fill).astype('float32')
 
                 # 7. save pco2 output into a netCDF
-                processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc".format(region,year,storm)));
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "ibtracs", region, year, storm, "Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc")
                 ncout = Dataset(processedFilePath, 'w');
+                
                 # create dataset and provide dimensions
-
                 ncout.createDimension("lat", wind_lat_dimension);
                 ncout.createDimension("lon", wind_lon_dimension);
                 ncout.createDimension("time", wind_time_dimension);
@@ -1797,204 +1807,6 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 print("PCO2 regridded for Storm = "+storm)
                 print(storm + " RESAMPLING COMPLETED")
 
-
-                ##CODE BELOW THIS POINT NOT CURRENTLY REQUIRED
-                # #### Verification data - atm pressure data monthly ECMWF
-                # downloadedRoot=("verification_data\\air_pressure\\2010");
-                # downloadedFileTemplate = Template(path.join(downloadedRoot,"2010${MM}_OCF-PRE-GLO-1M-100-ECMWF.nc"));
-                # all_air_pressure = np.empty((12, 180, 360), dtype=float);
-
-                # all_air_pressure_region_subset = np.empty((12, wind_lat_dimension, wind_lon_dimension), dtype=float);
-
-                #     #### resample atmospheric pressure to wind spatial grid
-                # for imonth in range(0, 12):
-                #     monthStr = format(imonth+1, "02d");
-                #     downloadFilePath = downloadedFileTemplate.safe_substitute(MM=monthStr);
-                #     air_pressure_nc = nc.Dataset(downloadFilePath, 'r')
-                #     all_air_pressure[:,:] = air_pressure_nc.variables["msl_mean"][:,:];
-
-                #     x=all_air_pressure[imonth,:,:]
-
-                #     # to do the interpolation, the grid needs to be as column lists, this does that
-
-                #     #these lines list lat and long of all points as columns
-                #     x_coord_range = [i for i in range(0, 360, 1)]
-                #     y_coord_range = [i for i in range(0, 180, 1)]
-                #     xy_coord = list(itertools.product(x_coord_range, y_coord_range))
-
-                #     #turn 2d data grid of data to column
-                #     #air pressure
-                #     values = x.flatten(order='F')
-
-                #     sample_df = pd.DataFrame()
-
-                #     #this is first input into interpolation function
-                #     sample_df['X'] = [xy[0] for xy in xy_coord]
-                #     sample_df['Y'] = [xy[1] for xy in xy_coord]
-
-                #     #this is second input into interpolation function
-                #     sample_df1 = pd.DataFrame()
-                #     sample_df1['value'] = values
-
-                #     #this is the new grid for the data. global 0.25 degree
-                #     grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
-
-                #     #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
-                #     grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
-
-                #     #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
-
-                #     yyy=grid_z1[:,:,0]
-                #     yyy=np.rot90(yyy,1)
-                #     yyy=np.flipud(yyy)
-
-                #     #plt.pcolor(yyy)
-                #     lon_new_grid = np.arange(-180, 180, 0.25)
-                #     lat_new_grid = np.arange(-90, 90, 0.25)
-
-                #     #now work out the subset of the data o extract pco2 for!
-                #     max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
-                #     min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
-
-                #     max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
-                #     min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
-
-                #     yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
-
-                #     # plt.pcolor(yyy_subset)
-                #     # plt.pcolor(all_air_pressure_region_subset[1,:,:])
-
-                #     all_air_pressure_region_subset[imonth,:,:] = yyy_subset;
-
-                #     #### make pCO2 matrix the same temporal scale as wind data
-
-                # #create empty pco2 grid the same size as the wind data.
-                # air_pressure_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
-
-                #     #### loop through the wind timestamps,
-                #     #extract the month and use that to pick which pressure data to use.
-                # for wind_step in range(0, wind_time_dimension):
-
-                #     a=wind_dates[wind_step].timetuple()
-                #     #this is month a[1]
-                #     #indexing starts at 0 so minus 1
-                #     month=a[1]-1
-
-                #     air_pressure_on_wind_grid[wind_step,:,:]=all_air_pressure_region_subset[month,:,:]
-
-                #     #### save air pressure output into a netCDF
-                # processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_verification_data_ECMWF_air_pressure.nc".format(region,year,storm)));
-                # ncout = Dataset(processedFilePath, 'w');
-                #     #### create dataset and provide dimensions
-
-                # ncout.createDimension("lat", wind_lat_dimension);
-                # ncout.createDimension("lon", wind_lon_dimension);
-                # ncout.createDimension("time", wind_time_dimension);
-
-                # #dimension variables
-                # var = ncout.createVariable("lat", float, ("lat",));
-                # var.units = "lat (degrees North)";
-                # var[:] = wind_lat;
-
-                # var = ncout.createVariable("lon", float, ("lon",));
-                # var.units = "lon (degrees East)";
-                # var[:] = wind_lon;
-
-                # var = ncout.createVariable("time", int, ("time",));
-                # var.long_name = "Time";
-                # var.units = "seconds since 1981-01-01";
-                # var[:] = wind_time
-
-                # #data variables
-                # var = ncout.createVariable("sea_level_pressure", float, ("time","lat", "lon"));
-                # var.units = "pascals";
-                # var.long_name = "Mean monthly air pressure resampled to hourly on a 0.25X0.25 degree spatial resolution";
-                # var[:] = air_pressure_on_wind_grid;
-
-                # ncout.close();
-                # print("Air pressure regridded for Storm = "+storm)
-
-
-                # #### world seas mask
-                # downloadedRoot=("verification_data\\");
-                # downloadFilePath = path.join(downloadedRoot,"World_Seas-final-complete_IGA.nc");
-                # world_seas = np.empty((180, 360), dtype=float);
-                # world_seas_nc = nc.Dataset(downloadFilePath, 'r')
-                # world_seas[:,:] = world_seas_nc.variables["sea-mask"][:,:];
-                # x=world_seas[:,:]
-
-                # #these lines list lat and long of all points as columns
-                # x_coord_range = [i for i in range(0, 360, 1)]
-                # y_coord_range = [i for i in range(0, 180, 1)]
-                # xy_coord = list(itertools.product(x_coord_range, y_coord_range))
-
-                # #turn 2d data grid of data to column
-                # values = x.flatten(order='F')
-
-                # sample_df = pd.DataFrame()
-
-                # #this is first input into interpolation function
-                # sample_df['X'] = [xy[0] for xy in xy_coord]
-                # sample_df['Y'] = [xy[1] for xy in xy_coord]
-
-                # #this is second input into interpolation function
-                # sample_df1 = pd.DataFrame()
-                # sample_df1['value'] = values
-
-                # values[values == -999] = 'nan' # or use np.nan
-
-                # #this is the new grid for the data. global 0.25 degree
-                # grid_x, grid_y = np.mgrid[ 0:360:1440j,0:180:720j]
-
-                # #grid_z0 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
-                # #grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='linear')
-                # grid_z1 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='nearest')
-
-                # #grid_z2 = griddata(sample_df, sample_df1, (grid_x,grid_y), method='cubic')
-
-                # yyy=grid_z1[:,:,0]
-                # yyy=np.rot90(yyy,1)
-                # #yyy=np.flipud(yyy)
-
-                # #plt.pcolor(yyy)
-                # lon_new_grid = np.arange(-180, 180, 0.25)
-                # lat_new_grid = np.arange(-90, 90, 0.25)
-
-                # #now work out the subset of the data to extract for!
-                # max_lat_ind = np.where(lat_new_grid == max_lat)[0][0]
-                # min_lat_ind = np.where(lat_new_grid == min_lat)[0][0]-1
-
-                # max_lon_ind = np.where(lon_new_grid == max_lon)[0][0]
-                # min_lon_ind = np.where(lon_new_grid == min_lon)[0][0]-1
-
-                # yyy_subset=yyy[min_lat_ind:max_lat_ind,min_lon_ind:max_lon_ind]
-
-                # #### save mask output into a netCDF
-                # processedFilePath = (path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_world_ocean_mask.nc".format(region,year,storm)));
-                # ncout = Dataset(processedFilePath, 'w');
-                # # create dataset and provide dimensions
-
-                # ncout.createDimension("lat", wind_lat_dimension);
-                # ncout.createDimension("lon", wind_lon_dimension);
-
-                # #dimension variables
-                # var = ncout.createVariable("lat", float, ("lat",));
-                # var.units = "lat (degrees North)";
-                # var[:] = wind_lat;
-
-                # var = ncout.createVariable("lon", float, ("lon",));
-                # var.units = "lon (degrees East)";
-                # var[:] = wind_lon;
-
-                # #data variables
-                # var = ncout.createVariable("seamask", float, ("lat", "lon"));
-                # var.units = "unitless";
-                # var.long_name = "World seas mask nearest interpolation on to  a 0.25X0.25 degree spatial resolution";
-                # var[:] = yyy_subset;
-
-                # ncout.close();
-
-                # print("mask regridded for Storm = "+storm)
 
 if __name__ == "__main__":
 
