@@ -180,7 +180,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
       file.write(filedata)
     return configfilenew;
 
-def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm_land_fraction):
+def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm_land_fraction,MAXSS_working_directory):
 
     #### Calculate grid cell areas
     rez=0.25 #spatial resolution of grid
@@ -233,7 +233,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
         with nc.Dataset(Fe_outputfile_list[fluxfile_number]) as flux_nc:
 
             #load in the flux data
-            Flux_data=flux_nc.variables['OF'][:,:] #DOES THIS NEED CHANGING? [:] (Appeared not to impact results)
+            Flux_data=flux_nc.variables['OF'][:] 
             #now scale the fluxes
             Scaledfluxes=Flux_data*areagrid*(1-storm_land_fraction)*(fe_temporal_hours/24)# g C hr-1 per unit area of the grid cell
             #now sum the fluxes over the whole region (Dan changed to nansum to allow calculation where nan values present)
@@ -245,28 +245,28 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
             Storm_time_hourly.append(Time_data)
 
     #these are lists- want them as 1d arrays
-    #first convert to 2d array
+    #first convert to numpy arrays
     arr = np.array(Storm_flux_hourly)
     time_arr = np.array(Storm_time_hourly)
-    #get size of matrix
-    arr_size=(np.shape(arr))
-    #second get dimensions and make 1d array
-    arr2=arr.reshape(arr_size[0]*arr_size[1],1)
-    #convert from grams to Tg
-    unit_factor=(1000000000000)
-    #Integrated flux in Tg every hour
-    Hourly_regional_flux_Tg=arr2/unit_factor
-    #reshape time array
-    time_arr2=time_arr.flatten()
+    
+    # Flatten BOTH to 1D arrays to prevent shape/dimension mismatch errors
+    # .reshape(-1) is a clean way to say "flatten this array into 1D"
+    Hourly_regional_flux_g = arr.reshape(-1)
+    time_arr2 = time_arr.reshape(-1)
+    
+    #Convert from grams to Tg using bulletproof scientific notation (1e12)
+    Hourly_regional_flux_Tg = Hourly_regional_flux_g / 1e12
+    
     time_for_plotting=get_datetimes(time_arr2)
 
     #total flux in region across all timesteps
-    Regiona_flux_Tg=np.nansum(Hourly_regional_flux_Tg) #Dan changed this to nansum to ensure data with nans was summed
+    Regional_flux_Tg=np.nansum(Hourly_regional_flux_Tg) #Dan changed this to nansum to ensure data with nans was summed
 
 
     #### Save these to a folder
     # if it doesn't exist make directory for Integrated flux files
-    Int_flux_folder_Path=path.join("output\\Spatially_integrated_fluxes\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}".format(region,year,run_name))
+    Int_flux_folder_Path=path.join(MAXSS_working_directory, "output", "Spatially_integrated_fluxes","maxss", "storm-atlas", "ibtracs",region,year,run_name)
+    
     if not os.path.exists(Int_flux_folder_Path):
         os.makedirs(Int_flux_folder_Path)
 
@@ -292,7 +292,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
     var = ncout.createVariable("Total_flux", float);
     var.units = "Tg C";
     var.long_name = "Total flux in region for period of the storm";
-    var[:] = Regiona_flux_Tg;
+    var[:] = Regional_flux_Tg;
 
     ncout.close();
 
@@ -427,7 +427,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_MAXSS_RUN = run_fluxengine(configFilePath_MAXSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 # Code to exit if test model run
                 if test_run:
@@ -442,7 +442,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 #### Run flux engine for "WIND run"
                 run_name="WIND_RUN"
@@ -452,7 +452,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_WIND_RUN = run_fluxengine(configFilePath_WIND_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_WIND_RUN,Hourlyfluxdate_WIND_RUN=get_spatially_integrated_flux(fe_WIND_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_WIND_RUN,Hourlyfluxdate_WIND_RUN=get_spatially_integrated_flux(fe_WIND_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 #### Run flux engine for "SST_with_gradients run"
                 run_name="SST_WITH_GRADIENTS_RUN"
@@ -462,7 +462,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SST_WITH_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_WITH_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SST_WITH_GRADIENTS_RUN,Hourlyfluxdate_SST_WITH_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_WITH_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_SST_WITH_GRADIENTS_RUN,Hourlyfluxdate_SST_WITH_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_WITH_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 #### Run flux engine for "SST_NO_gradients run"
                 run_name="SST_NO_GRADIENTS_RUN"
@@ -472,7 +472,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SST_NO_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_NO_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SST_NO_GRADIENTS_RUN,Hourlyfluxdate_SST_NO_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_NO_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_SST_NO_GRADIENTS_RUN,Hourlyfluxdate_SST_NO_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_NO_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 #### Run flux engine for "SST_NO_gradients run"
                 run_name="V_GAS_RUN"
@@ -482,7 +482,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_V_GAS_RUN = run_fluxengine(configFilePath_V_GAS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_V_GAS_RUN,Hourlyfluxdate_V_GAS_RUN=get_spatially_integrated_flux(fe_V_GAS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_V_GAS_RUN,Hourlyfluxdate_V_GAS_RUN=get_spatially_integrated_flux(fe_V_GAS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 #### Run flux engine for "SSS run"
                 run_name="SSS_RUN"
@@ -492,7 +492,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SSS_RUN = run_fluxengine(configFilePath_SSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SSS_RUN,Hourlyfluxdate_SSS_RUN=get_spatially_integrated_flux(fe_SSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_SSS_RUN,Hourlyfluxdate_SSS_RUN=get_spatially_integrated_flux(fe_SSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 #### Run flux engine for "PRESSURE run"
                 run_name="PRESSURE_RUN"
@@ -502,7 +502,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_PRESSURE_RUN = run_fluxengine(configFilePath_PRESSURE_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_PRESSURE_RUN,Hourlyfluxdate_PRESSURE_RUN=get_spatially_integrated_flux(fe_PRESSURE_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                Hourlyflux_PRESSURE_RUN,Hourlyfluxdate_PRESSURE_RUN=get_spatially_integrated_flux(fe_PRESSURE_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 # #### Run flux engine for "PRECIPITATION run"
                 # run_name="PRECIPITATION_RUN"
@@ -512,7 +512,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 # runStatus, fe_PRECIPITATION_RUN = run_fluxengine(configFilePath_PRECIPITATION_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
                 # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, storm_land_fraction)
+                # Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
 
                 # Add to storm counter when everything is done.
                 storm_counter=storm_counter+1
