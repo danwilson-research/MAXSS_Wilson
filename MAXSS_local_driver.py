@@ -30,7 +30,7 @@ specified_storms = [] #["RINA","AL052010_","ALEX" "BONNIE", "MARIA", , "COLIN", 
 #When set to True, only MAXSS_main run is computed and only first 5 days modelled.
 test_run = True
 
-re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, specified_storms, MAXSS_regions, specified_years = ['2010'])
+re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, specified_storms, MAXSS_regions, specified_years)
 
 #ru.MAXSS_flux_run(MAXSS_working_directory,configfiletemplate,verbose,specified_storms,test_run)
 
