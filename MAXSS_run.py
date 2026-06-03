@@ -48,14 +48,15 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     #DJF 09/05/2026: Added the configfiletemplate as a function input so it can be modified by the main function
 
     # if it doesn't exist make directory for config files
-    config_folder_Path=path.join("output\\configs\\{2}\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}".format(region,year,run_name))
-    if not os.path.exists(config_folder_Path):
-        os.makedirs(config_folder_Path)
+    config_folder_path = path.join("output", "configs", run_name, "maxss","storm-atlas","tropical","ibtracs", region, year)
+    
+    if not os.path.exists(config_folder_path):
+        os.makedirs(config_folder_path)
 
     #copy configuration file template
     # configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf" # DJF 09/05/2026: Added as function input
 
-    configfilenew = os.path.join(config_folder_Path, f"{storm}.conf")
+    configfilenew = os.path.join(config_folder_path, f"{storm}.conf")
     shutil.copy(configfiletemplate,configfilenew)
 
 
@@ -180,7 +181,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
       file.write(filedata)
     return configfilenew;
 
-def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm_land_fraction,MAXSS_working_directory):
+def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory):
 
     #### Calculate grid cell areas
     rez=0.25 #spatial resolution of grid
@@ -265,7 +266,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
 
     #### Save these to a folder
     # if it doesn't exist make directory for Integrated flux files
-    Int_flux_folder_Path=path.join(MAXSS_working_directory, "output", "Spatially_integrated_fluxes","maxss", "storm-atlas", "ibtracs",region,year,run_name)
+    Int_flux_folder_Path=path.join(MAXSS_working_directory, "output", "Spatially_integrated_fluxes","maxss", "tropical", "storm-atlas", "ibtracs",region,year,run_name)
     
     if not os.path.exists(Int_flux_folder_Path):
         os.makedirs(Int_flux_folder_Path)
@@ -319,8 +320,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
     for region in MAXSS_regions:
 
         #define the directory for the region
-        region_directory = path.join(MAXSS_working_directory+"\\maxss\\storm-atlas\\ibtracs\\{0}".format(region));
-
+        region_directory = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region);
         #look for the year subfolders
 
         #get a list of the years
@@ -368,7 +368,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 #directory for storm being processes
                 storm_dir=storm_directory_list[storm_counter]
                 #directory for storm being processes relative to current working directory
-                storm_dir_relative = path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm));
+                storm_dir_relative = path.join("maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm);
 
                 # need to get the identifier from the storm name as it is used in .nc file string
                 storm_id=storm.split('_')[1]
@@ -391,7 +391,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 #### Need to add temporal chunking to config file
                 #- so need to open wind data to get that
                 # Use 'with' to ensure the wind file closes immediately after extracting metadata
-                with nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc".format(region,year,storm))) as winds_nc:
+                with nc.Dataset(path.join("maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_L4_windspeed.nc")) as winds_nc:
                     wind_northward = winds_nc.variables['windspeed'][:]
 
                     wind_time_dimension=len(wind_northward)
@@ -404,7 +404,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                     time_chunk_val = str(len(wind_time))
 
                 # Extract the land fraction
-                with nc.Dataset(path.join("maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}\\Resampled_for_fluxengine_MAXSS_land_fraction.nc".format(region,year,storm))) as land_fraction_nc:
+                with nc.Dataset(path.join("maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_land_fraction.nc")) as land_fraction_nc:
                     storm_land_fraction = land_fraction_nc.variables['land_proportion'][0]
 
                 # Set model start and end times
