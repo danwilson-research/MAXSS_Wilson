@@ -61,7 +61,7 @@ def process_slice(valData, errData,wind_lat_dimension, wind_lon_dimension, min_l
 
 
 # if __name__ == "__main__": # DJF: 09/05/2026: Turning the _main_ into a function
-def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", specified_storms = [], MAXSS_regions = ["north-atlantic"]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
+def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", downloadedRoot = "E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux", specified_storms = [], MAXSS_regions = ["north-atlantic"], specified_years =[]): # Values after the equals are the default values that would be called if you used function as: MAXSS_resample_main()
 
 
     """
@@ -102,6 +102,15 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
         # zip() pairs up year_list ["2010", "2011"] with year_directory_list ["/path/2010", "/path/2011"]
         for year, current_year_dir in zip(MAXSS_years, year_directory_list):
             
+            # 2. Add the filtering block for years right here:
+            if len(specified_years) > 0:
+                # If the current year doesn't match any fragment in specified_years, skip it!
+                if not any(str(yr_fragment) in year for yr_fragment in specified_years):
+                    print(f"Skipping year (not in specified list): {year}")
+                    continue
+
+            print(f"Entering Year Directory: {year}")
+                
             # Make a list of the storm folder names
             storm_list = []
             for entry_name in os.listdir(current_year_dir):
@@ -1810,12 +1819,12 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
 if __name__ == "__main__":
 
-    description = """Runs the MAXSS resampling for each storm""";
-    parser = argparse.ArgumentParser(description=description);
-    parser.add_argument("--MAXSS_working_directory", type=str, default="E:/MAXSS_working_directory",
-                        help="Path to the required working directory");
-    parser.add_argument("--downloadedRoot", type=str, default="E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux",
-                        help="Path to the data directory containing the UExP-FNN-U flux folder");
+description = """Runs the MAXSS resampling for each storm""";
+parser = argparse.ArgumentParser(description=description);
+parser.add_argument("--MAXSS_working_directory", type=str, default="E:/MAXSS_working_directory",
+                    help="Path to the required working directory");
+parser.add_argument("--downloadedRoot", type=str, default="E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux",
+                    help="Path to the data directory containing the UExP-FNN-U flux folder");
 
-    clArgs = parser.parse_args();
-    MAXSS_resample_main(MAXSS_working_directory = clArgs.MAXSS_working_directory, downloadedRoot = clArgs.downloadedRoot)
+clArgs = parser.parse_args();
+MAXSS_resample_main(MAXSS_working_directory = clArgs.MAXSS_working_directory, downloadedRoot = clArgs.downloadedRoot)
