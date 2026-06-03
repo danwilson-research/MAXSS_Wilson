@@ -20,12 +20,12 @@ netcdf_output_root = path.join(MAXSS_working_directory, "output/Spatially_integr
 runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
         "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
 MAXSS_regions = ["north-atlantic"]
-specified_years = ['2010','2011']
+specified_years = ['2010']
 
 verbose = True
 
 #Specify which storms you would like to run # if no storms specified, all storms run
-specified_storms = ["ALEX"] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
+specified_storms = [] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
 
 #When set to True, only MAXSS_main run is computed and only first 5 days modelled.
 test_run = True
