@@ -1817,14 +1817,13 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 print(storm + " RESAMPLING COMPLETED")
 
 
-if __name__ == "__main__":
-
-description = """Runs the MAXSS resampling for each storm""";
-parser = argparse.ArgumentParser(description=description);
-parser.add_argument("--MAXSS_working_directory", type=str, default="E:/MAXSS_working_directory",
-                    help="Path to the required working directory");
-parser.add_argument("--downloadedRoot", type=str, default="E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux",
-                    help="Path to the data directory containing the UExP-FNN-U flux folder");
-
-clArgs = parser.parse_args();
-MAXSS_resample_main(MAXSS_working_directory = clArgs.MAXSS_working_directory, downloadedRoot = clArgs.downloadedRoot)
+# if __name__ == "__main__":
+#     description = """Runs the MAXSS resampling for each storm""";
+#     parser = argparse.ArgumentParser(description=description);
+#     parser.add_argument("--MAXSS_working_directory", type=str, default="E:/MAXSS_working_directory",
+#                         help="Path to the required working directory");
+#     parser.add_argument("--downloadedRoot", type=str, default="E:/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux",
+#                         help="Path to the data directory containing the UExP-FNN-U flux folder");
+    
+#     clArgs = parser.parse_args();
+#     MAXSS_resample_main(MAXSS_working_directory = clArgs.MAXSS_working_directory, downloadedRoot = clArgs.downloadedRoot)
