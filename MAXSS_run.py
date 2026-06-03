@@ -170,7 +170,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     filedata += "\nexclude_outputs = " + ",".join(variables_to_exclude) + "\n"
 
     #Set the mask used to only simulate flux during analysis period
-    filedata = filedata.replace('mask_path = data/mask/<YYYY><MM>_maskfile.nc', 'mask_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_storm_timings_with_masks.nc')
+    filedata = filedata.replace('mask_path = data/mask/<YYYY><MM>_maskfile.nc', 'mask_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_storm_timings_with_masks.nc')
     filedata = filedata.replace('mask_prod = mask_variable','mask_prod = analysis_mask')
     filedata = filedata.replace('mask_temporalChunking = chunk_size','mask_temporalChunking ='+ time_chunk_val)
 
@@ -209,7 +209,7 @@ def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm
         lat_counter=lat_counter+1
 
     #### Calculate Integrated flux
-    print("\n\nNow calculating flux budgets for Region={0} year={1} Storm={2}".format(region,year,storm));
+    print("\n\nNow calculating flux budgets for Region={0} year={1} Storm={2}".format(region,year,storm))
     #Flux is m^2 per day
     #Areas are all in m^2
     #Timestep needs to be scaled by data resolution
