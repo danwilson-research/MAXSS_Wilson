@@ -73,7 +73,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
 
     # Wind paths
     if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
-        filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
+        filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+ storm_dir_relative + r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
         filedata = filedata.replace('windu10_temporalChunking = numberoftimesteps','windu10_temporalChunking ='+str(timestepsinfile))
     else:
         filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
@@ -161,7 +161,8 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
 
     #output directory
-    filedata = filedata.replace('output_dir = output/', 'output_dir ='+"output\\{3}\\maxss\\storm-atlas\\ibtracs\\{0}\\{1}\\{2}".format(region,year,storm,run_name))
+    filedata = filedata.replace('output_dir = output/', 'output_dir = ' + "output/{3}/maxss/storm-atlas/tropical/ibtracs/{0}/{1}/{2}".format(region, year, storm, run_name))
+    
     #output file format
     filedata = filedata.replace('output_file = MAXSS_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc', 'output_file = MAXSS_'+storm+'_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc')
 
