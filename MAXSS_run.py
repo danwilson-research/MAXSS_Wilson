@@ -73,45 +73,45 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
 
     # Wind paths
     if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
-        filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+ storm_dir_relative + r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
+        filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+ storm_dir_relative + '/Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
         filedata = filedata.replace('windu10_temporalChunking = numberoftimesteps','windu10_temporalChunking ='+str(timestepsinfile))
     else:
-        filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
+        filedata = filedata.replace('windu10_path = windu10path.nc', 'windu10_path ='+ storm_dir_relative + '/Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
         filedata = filedata.replace('windu10_temporalChunking = numberoftimesteps','windu10_temporalChunking ='+str(timestepsinfile))
 
     # Wind moment 2 path
     if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
-        filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
+        filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_L4_windspeed.nc')
         filedata = filedata.replace('windu10_moment2_temporalChunking = numberoftimesteps','windu10_moment2_temporalChunking ='+str(timestepsinfile))
     else:
-        filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
+        filedata = filedata.replace('windu10_moment2_path = windmoment2path.nc', 'windu10_moment2_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_L4_windspeed_pre_storm_reference.nc')
         filedata = filedata.replace('windu10_moment2_temporalChunking = numberoftimesteps','windu10_moment2_temporalChunking ='+str(timestepsinfile))
 
     # SST (with and without gradients) paths
     if run_name=="MAXSS_RUN" or run_name=="SST_WITH_GRADIENTS_RUN" or run_name=="SST_NO_GRADIENTS_RUN":
         # SST variable set up
-        filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc')
+        filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ESACCI_SST.nc')
         filedata = filedata.replace('sstfnd_temporalChunking = numberoftimesteps','sstfnd_temporalChunking ='+str(timestepsinfile))
 
         # pco2 variable set up
-        filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
+        filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_Ford_et_al_pco2.nc')
         filedata = filedata.replace('pgas_sw_temporalChunking = numberoftimesteps','pgas_sw_temporalChunking ='+str(timestepsinfile))
 
         # pco2 SST variable set up
-        filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
+        filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_Ford_et_al_pco2.nc')
         filedata = filedata.replace('pco2_sst_temporalChunking = numberoftimesteps','pco2_sst_temporalChunking ='+str(timestepsinfile))
 
     else:
         # SST variable set up
-        filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc')
+        filedata = filedata.replace('sstfnd_path = fndpath.nc', 'sstfnd_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ESACCI_SST_pre_storm_reference.nc')
         filedata = filedata.replace('sstfnd_temporalChunking = numberoftimesteps','sstfnd_temporalChunking ='+str(timestepsinfile))
 
         # pco2 variable set up
-        filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
+        filedata = filedata.replace('pgas_sw_path = pco2seawaterpath.nc', 'pgas_sw_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
         filedata = filedata.replace('pgas_sw_temporalChunking = numberoftimesteps','pgas_sw_temporalChunking ='+str(timestepsinfile))
 
         # pco2 SST variable set up
-        filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
+        filedata = filedata.replace('pco2_sst_path = pco2swpath.nc', 'pco2_sst_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
         filedata = filedata.replace('pco2_sst_temporalChunking = numberoftimesteps','pco2_sst_temporalChunking ='+str(timestepsinfile))
 
     # SST no gradients (turn off gradients)
@@ -123,41 +123,41 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
 
     if run_name=="MAXSS_RUN" or run_name=="V_GAS_RUN":
         # V_gas path
-        filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2.nc')
+        filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_Ford_et_al_pco2.nc')
         filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
         #update variable name
         filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = V_gas')
     else:
-        filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
+        filedata = filedata.replace('vgas_air_path = co2airmixingrationpath.nc', 'vgas_air_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc')
         filedata = filedata.replace('vgas_air_temporalChunking = numberoftimesteps','vgas_air_temporalChunking ='+str(timestepsinfile))
         #update variable name
         filedata = filedata.replace('vgas_air_prod = xCO2air_mean', 'vgas_air_prod = V_gas')
 
     # salinity path
     if run_name=="MAXSS_RUN" or run_name=="SSS_RUN":
-        filedata = filedata.replace('salinity_path = salinitypath.nc', 'salinity_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SSS.nc')
+        filedata = filedata.replace('salinity_path = salinitypath.nc', 'salinity_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ESACCI_SSS.nc')
         filedata = filedata.replace('salinity_temporalChunking = numberoftimesteps','salinity_temporalChunking ='+str(timestepsinfile))
     else:
-        filedata = filedata.replace('salinity_path = salinitypath.nc', 'salinity_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ESACCI_SSS_pre_storm_reference.nc')
+        filedata = filedata.replace('salinity_path = salinitypath.nc', 'salinity_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ESACCI_SSS_pre_storm_reference.nc')
         filedata = filedata.replace('salinity_temporalChunking = numberoftimesteps','salinity_temporalChunking ='+str(timestepsinfile))
 
     # Pressure path
     if run_name=="MAXSS_RUN" or run_name=="PRESSURE_RUN":
-        filedata = filedata.replace('pressure_path = pressurepath.nc', 'pressure_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc')
+        filedata = filedata.replace('pressure_path = pressurepath.nc', 'pressure_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ERA5_pressure.nc')
         filedata = filedata.replace('pressure_temporalChunking = numberoftimesteps','pressure_temporalChunking ='+str(timestepsinfile))
         #matching the variable name to that shown in Panoply
         filedata = filedata.replace('pressure_prod = Sea level pressure', 'pressure_prod = sea_level_pressure')
     else:
-        filedata = filedata.replace('pressure_path = pressurepath.nc', 'pressure_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_pressure_pre_storm_reference.nc')
+        filedata = filedata.replace('pressure_path = pressurepath.nc', 'pressure_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ERA5_pressure_pre_storm_reference.nc')
         filedata = filedata.replace('pressure_temporalChunking = numberoftimesteps','pressure_temporalChunking ='+str(timestepsinfile))
         #matching the variable name to that shown in Panoply
         filedata = filedata.replace('pressure_prod = Sea level pressure', 'pressure_prod = sea_level_pressure')
     # Precipitation path
     if run_name=="MAXSS_RUN" or run_name=="PRECIPITATION_RUN":
-        filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc')
+        filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ERA5_precipitation.nc')
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
     else:
-        filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+r'\Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc')
+        filedata = filedata.replace('rain_path = precipitationpath.nc', 'rain_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_MAXSS_ERA5_precipitation_pre_storm_reference.nc')
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
 
     #output directory
