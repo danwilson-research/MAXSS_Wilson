@@ -433,7 +433,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 # Code to exit if test model run
                 if test_run:
                     print(f"[TEST RUN COMPLETE]: Successfully verified 'MAXSS_RUN' for {storm}. Exiting storm loop as requested.")
-                    break  # <--- This completely drops out of the "for storm in MAXSS_storms" loop
+                    return  # <exits the whole function
 
                 #### Run flux engine for "REF run"
                 run_name="REF_RUN"
