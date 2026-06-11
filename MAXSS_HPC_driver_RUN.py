@@ -25,10 +25,10 @@ specified_years = ['2010']
 verbose = True
 
 #Specify which storms you would like to run # if no storms specified, all storms run
-specified_storms = ["AL052010"] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
+specified_storms = ["ALEX"] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
 
 #When set to True, only MAXSS_main run is computed and only first 5 days modelled.
-test_run = True
+test_run = False
 
 #re.MAXSS_resample_main(MAXSS_working_directory,downloadedRoot, specified_storms, MAXSS_regions,specified_years)
 
