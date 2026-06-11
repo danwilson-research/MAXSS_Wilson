@@ -182,125 +182,6 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
       file.write(filedata)
     return configfilenew;
 
-def get_spatially_integrated_flux(fe,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory):
-
-    #### Calculate grid cell areas
-    rez=0.25 #spatial resolution of grid
-    storm_lon=fe.longitude_data # latitude of fluxengine output
-    storm_lat=fe.latitude_data # latitude of fluxengine output
-    areagrid=0*fe.latitude_grid # lat and longitude grid size, set to 0.
-
-    geod = Geod(ellps='WGS84')        # use PYPROJ and WGS84 - both well documented
-
-    lat_counter=0
-    for lat in storm_lat: #loop through latitude
-        lon_counter=0
-        for lon in storm_lon: #loop through longitude
-            #define the latitude and longitude coordinates of the four points
-            #for which the lat and lon is the centre. A fifth value is needed
-            #to complete the shape.
-            lats = [lat-rez/2, lat-rez/2, lat+rez/2, lat+rez/2, lat-rez/2]
-            lons = [lon-rez/2, lon+rez/2, lon+rez/2, lon-rez/2,lon-rez/2]
-
-            poly_area, poly_perimeter = geod.polygon_area_perimeter(lons, lats)
-            #print("area: {} , perimeter: {}".format(poly_area, poly_perimeter))
-            areagrid[lat_counter,lon_counter]=poly_area # add the lat and lon values to matrix
-            lon_counter=lon_counter+1
-        lat_counter=lat_counter+1
-
-    #### Calculate Integrated flux
-    print("\n\nNow calculating flux budgets for Region={0} year={1} Storm={2}".format(region,year,storm))
-    #Flux is m^2 per day
-    #Areas are all in m^2
-    #Timestep needs to be scaled by data resolution
-    #Equation is then Flux*Area*(timestep in hours/24)
-    #The total flux is then the sum of these fluxes
-
-    # Get all files and directories ending with .nc
-    Fe_outputfile_list = glob(os.path.join(fe.runParams.output_dir, "*.nc"))
-
-    #get the temporal resolution from the fluxengine
-    #turn it into hours
-    timestep=fe.runParams.temporal_resolution
-    seconds = timestep.total_seconds()
-    fe_temporal_hours = seconds // 3600
-
-    #create variables the size of the hourly timesteps
-    Storm_flux_hourly=[]
-    Storm_time_hourly=[]
-
-    #loop through netCDF files
-    for fluxfile_number in range(0, len(Fe_outputfile_list)):
-        #Load using with so that .nc file automatically closed after use
-        with nc.Dataset(Fe_outputfile_list[fluxfile_number]) as flux_nc:
-
-            #load in the flux data
-            Flux_data=flux_nc.variables['OF'][:] 
-            #now scale the fluxes
-            Scaledfluxes=Flux_data*areagrid*(1-storm_land_fraction)*(fe_temporal_hours/24)# g C hr-1 per unit area of the grid cell
-            #now sum the fluxes over the whole region (Dan changed to nansum to allow calculation where nan values present)
-            Integrated_regional_flux=np.nansum(Scaledfluxes,axis =(1,2))#sum over spatial dimension
-            Time_data=flux_nc.variables['time'][:]
-
-            #appendthe integrated flux and time to a combined Matrix.
-            Storm_flux_hourly.append(Integrated_regional_flux)
-            Storm_time_hourly.append(Time_data)
-
-    #these are lists- want them as 1d arrays
-    #first convert to numpy arrays
-    arr = np.array(Storm_flux_hourly)
-    time_arr = np.array(Storm_time_hourly)
-    
-    # Flatten BOTH to 1D arrays to prevent shape/dimension mismatch errors
-    # .reshape(-1) is a clean way to say "flatten this array into 1D"
-    Hourly_regional_flux_g = arr.reshape(-1)
-    time_arr2 = time_arr.reshape(-1)
-    
-    #Convert from grams to Tg using bulletproof scientific notation (1e12)
-    Hourly_regional_flux_Tg = Hourly_regional_flux_g / 1e12
-    
-    time_for_plotting=get_datetimes(time_arr2)
-
-    #total flux in region across all timesteps
-    Regional_flux_Tg=np.nansum(Hourly_regional_flux_Tg) #Dan changed this to nansum to ensure data with nans was summed
-
-
-    #### Save these to a folder
-    # if it doesn't exist make directory for Integrated flux files
-    Int_flux_folder_Path=path.join(MAXSS_working_directory, "output", "Spatially_integrated_fluxes","maxss", "tropical", "storm-atlas", "ibtracs",region,year,run_name)
-    
-    if not os.path.exists(Int_flux_folder_Path):
-        os.makedirs(Int_flux_folder_Path)
-
-    processedFilePath = os.path.join(Int_flux_folder_Path, f"{storm}_{run_name}.nc")
-
-    ncout = Dataset(processedFilePath, 'w');
-
-        #### provide dimensions
-    ncout.createDimension("time", len(time_arr2));
-
-    var = ncout.createVariable("time", int, ("time",));
-    var.long_name = "Time";
-    var.units = "seconds since 1970-01-01 00:00:00";
-    var[:] = time_arr2
-
-    #data variables
-    var = ncout.createVariable("Hourly_flux", float, ("time",));
-    var.units = "Tg C hr-1";
-    var.long_name = "Total hourly flux in region";
-    var[:] = Hourly_regional_flux_Tg;
-
-    #data variables
-    var = ncout.createVariable("Total_flux", float);
-    var.units = "Tg C";
-    var.long_name = "Total flux in region for period of the storm";
-    var[:] = Regional_flux_Tg;
-
-    ncout.close();
-
-    return Hourly_regional_flux_Tg,time_for_plotting;
-
-
 # if __name__ == "__main__":
 def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf",verbose = True, specified_storms = [], test_run = False):
     # verbose=True
@@ -427,9 +308,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_MAXSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_MAXSS_RUN = run_fluxengine(configFilePath_MAXSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_MAXSS_RUN,Hourlyfluxdate_MAXSS_RUN=get_spatially_integrated_flux(fe_MAXSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 # Code to exit if test model run
                 if test_run:
                     print(f"[TEST RUN COMPLETE]: Successfully verified 'MAXSS_RUN' for {storm}. Exiting storm loop as requested.")
@@ -442,9 +321,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_REF_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_REF_RUN = run_fluxengine(configFilePath_REF_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_REF_RUN,Hourlyfluxdate_REF_RUN=get_spatially_integrated_flux(fe_REF_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 #### Run flux engine for "WIND run"
                 run_name="WIND_RUN"
                 # create custom config file for this storm
@@ -452,9 +329,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_WIND_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_WIND_RUN = run_fluxengine(configFilePath_WIND_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_WIND_RUN,Hourlyfluxdate_WIND_RUN=get_spatially_integrated_flux(fe_WIND_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 #### Run flux engine for "SST_with_gradients run"
                 run_name="SST_WITH_GRADIENTS_RUN"
                 # create custom config file for this storm
@@ -462,9 +337,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_SST_WITH_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SST_WITH_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_WITH_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SST_WITH_GRADIENTS_RUN,Hourlyfluxdate_SST_WITH_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_WITH_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 #### Run flux engine for "SST_NO_gradients run"
                 run_name="SST_NO_GRADIENTS_RUN"
                 # create custom config file for this storm
@@ -472,9 +345,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_SST_NO_GRADIENTS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SST_NO_GRADIENTS_RUN = run_fluxengine(configFilePath_SST_NO_GRADIENTS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SST_NO_GRADIENTS_RUN,Hourlyfluxdate_SST_NO_GRADIENTS_RUN=get_spatially_integrated_flux(fe_SST_NO_GRADIENTS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 #### Run flux engine for "SST_NO_gradients run"
                 run_name="V_GAS_RUN"
                 # create custom config file for this storm
@@ -482,9 +353,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_V_GAS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_V_GAS_RUN = run_fluxengine(configFilePath_V_GAS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_V_GAS_RUN,Hourlyfluxdate_V_GAS_RUN=get_spatially_integrated_flux(fe_V_GAS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 #### Run flux engine for "SSS run"
                 run_name="SSS_RUN"
                 # create custom config file for this storm
@@ -492,9 +361,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_SSS_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_SSS_RUN = run_fluxengine(configFilePath_SSS_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_SSS_RUN,Hourlyfluxdate_SSS_RUN=get_spatially_integrated_flux(fe_SSS_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 #### Run flux engine for "PRESSURE run"
                 run_name="PRESSURE_RUN"
                 # create custom config file for this storm
@@ -502,9 +369,7 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 configFilePath_PRESSURE_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name,time_chunk_val,configfiletemplate)
                 print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 runStatus, fe_PRESSURE_RUN = run_fluxengine(configFilePath_PRESSURE_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                #call function to get sum of hourly fluxes scaled by area.
-                Hourlyflux_PRESSURE_RUN,Hourlyfluxdate_PRESSURE_RUN=get_spatially_integrated_flux(fe_PRESSURE_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 # #### Run flux engine for "PRECIPITATION run"
                 # run_name="PRECIPITATION_RUN"
                 # # create custom config file for this storm
@@ -512,8 +377,6 @@ def MAXSS_flux_run(MAXSS_working_directory="E:/MAXSS_working_directory",configfi
                 # configFilePath_PRECIPITATION_RUN=make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm,run_name)
                 # print("Running FluxEngine for Region={0} year={1} Storm={2}".format(region,year,storm));
                 # runStatus, fe_PRECIPITATION_RUN = run_fluxengine(configFilePath_PRECIPITATION_RUN,run_startime,run_endtime,processLayersOff=True, verbose=False);
-                # #call function to get sum of hourly fluxes scaled by area.
-                # Hourlyflux_PRECIPITATION_RUN,Hourlyfluxdate_PRECIPITATION_RUN=get_spatially_integrated_flux(fe_PRECIPITATION_RUN,region,year,storm,run_name,wind_time, storm_land_fraction, MAXSS_working_directory)
-
+                
                 # Add to storm counter when everything is done.
                 storm_counter=storm_counter+1
