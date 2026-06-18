@@ -120,7 +120,14 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
         cols = ['Storm', 'Year', 'Region'] + [r for r in runs if r in df_final.columns]
         df_final = df_final[cols]
         
-        output_path = path.join(output_base, "storm_component_flux_summary.csv")
+        # Extract unique years processed in this specific run to name the file safely
+        unique_years = sorted(list(set(df_final['Year'].astype(str))))
+        if len(unique_years) == 1:
+            csv_name = f"storm_component_flux_summary_{unique_years[0]}.csv"
+        else:
+            csv_name = f"storm_component_flux_summary_{unique_years[0]}_to_{unique_years[-1]}.csv"
+
+        output_path = path.join(output_base, csv_name)
         os.makedirs(output_base, exist_ok=True)
         df_final.to_csv(output_path, index=False)
         
