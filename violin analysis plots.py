@@ -5,14 +5,14 @@ Created on Thu Apr 23 17:49:04 2026
 @author: dw557
 """
 
-#Script to create summary violin plots
+#Script to create summary violin plots of the toal flux for storms in 2010 and 2011
 
-#Import required packages
+# Import required packages
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-#Set the colours to be used in these plots
+# Set the colours to be used in these plots
 # Define colorblind palette for cb_colors indices
 cb_colors = sns.color_palette("colorblind", 11)
 
@@ -32,13 +32,12 @@ final_color_map = {
 ## Plot 1: Comparison of total flux in each model component run ##
 
 # Load in required data
-df = pd.read_csv('E:/MAXSS_working_directory/output/spatially_integrated_fluxes/storm_component_flux_summary.csv')
+df = pd.read_csv('E:/MAXSS_working_directory/HPC_output/Spatially_integrated_fluxes/storm_component_flux_summary_2010_to_2011.csv')
 
-# Turn the run columns into a single column named 'Component Run'
-# Drop the year and region columns
-df_melted = df.drop(columns=['Year', 'Region']).melt(id_vars=['Storm'], 
-                                                     var_name='Component Run', 
-                                                     value_name='Total Flux (Tg C)')
+# Keep 'Year' in id_vars so we can split by rows
+df_melted = df.drop(columns=['Region']).melt(id_vars=['Storm', 'Year'], 
+                                             var_name='Component Run', 
+                                             value_name='Total Flux (Tg C)')
 
 label_mapping = {
     'MAXSS_RUN' : 'Full Simulation', 
@@ -49,65 +48,41 @@ label_mapping = {
     'V_GAS_RUN': 'XCO2',
     'PRESSURE_RUN': 'Pressure'}
                                                           
-#Apply the mapping to the column
+# Apply the mapping to the column
 df_melted['Component Run'] = df_melted['Component Run'].map(label_mapping)        
 
-# 3. Create the Plot
-plt.figure(figsize=(12, 6))
+# Set up the vertical stacked grid
+g = sns.catplot(
+    x='Component Run', 
+    y='Total Flux (Tg C)', 
+    row='Year',               
+    data=df_melted, 
+    kind='violin', 
+    hue='Component Run',
+    palette=final_color_map, 
+    inner='points', 
+    cut=0, 
+    alpha=0.75,
+    legend=False,
+    height=4.5,               
+    aspect=2.5                
+)
 
-#Set up the violin plots
-sns.violinplot(x='Component Run', y='Total Flux (Tg C)', data=df_melted, legend = False, 
-               hue='Component Run',palette=final_color_map, inner='points', cut=0, zorder=2, alpha = 0.75) # 'inner=points' shows each storm's value
+# --- ADDED THIS LINE HERE ---
+# Forcefully strip out Seaborn's default row/column title text templates
+g.set_titles(row_template="", col_template="")
 
-# Set Bold Labels
-plt.xlabel('Component Run', fontweight='bold')
-plt.ylabel('Total Flux (Tg C)', fontweight='bold')
+# Panel label lookup tracking index numbers to clean alphabetical tags
+panel_labels = {0: 'a)', 1: 'b)'}
 
-#add grid and xticks
-plt.grid(zorder =1)
-#plt.xticks(rotation=45, ha='right')
-
-plt.tight_layout()
-plt.show()
-
-
-## Plot 2 Comparison of Taylor Flux Results ##
-
-df = pd.read_csv('E:/MAXSS_working_directory/output/taylor_decomposition_summary/taylor_decomposition_summary.csv')
-
-# Turn the run columns into a single column named 'Taylor decomposition'
-# Drop the year and region columns
-df_melted = df.drop(columns=['Year', 'Region', 'SST_NoGrad_Contribution_TgC','Actual_Anomaly_TgC',
-'Taylor_Sum_NoGrad_TgC', 'Taylor_Sum_WithGrad_TgC']).melt(id_vars=['Storm_ID'], 
-                                                     var_name='Taylor decomposition', 
-                                                     value_name='Total Flux (Tg C)')
- 
-#Customise plto labels
-label_mapping = {
-    'Wind_Contribution_TgC': 'Wind',
-    'SSS_Contribution_TgC': 'Salinity (SSS)',
-    'VGas_Contribution_TgC': 'XCO2',
-    'Pressure_Contribution_TgC': 'Pressure',
-    'SST_WithGrad_Contribution_TgC': 'SST (with Gradients)'}
-                                                          
-#Apply the mapping to the column
-df_melted['Taylor decomposition'] = df_melted['Taylor decomposition'].map(label_mapping)                                                          
-                                                          
-                                                          
-# 3. Create the Plot
-plt.figure(figsize=(12, 6))
-
-#Set up the violin plots
-sns.violinplot(x='Taylor decomposition', y='Total Flux (Tg C)', data=df_melted, legend = False, 
-               hue='Taylor decomposition', palette=final_color_map, inner='points', cut=0, zorder=2, alpha = 0.75) # 'inner=points' shows each storm's value
-
-# Set Bold Labels
-plt.xlabel('Taylor decomposition', fontweight='bold')
-plt.ylabel('Total Flux (Tg C)', fontweight='bold')
-
-#add grid and xticks
-plt.grid(zorder =1)
-#plt.xticks(rotation=45, ha='right')
+# Apply formatting across all vertical axes panels safely
+for i, ax in enumerate(g.axes.flat):
+    ax.grid(zorder=1, linestyle='--', alpha=0.5)
+    ax.set_xlabel('Component Run', fontweight='bold')
+    ax.set_ylabel('Total Flux (Tg C)', fontweight='bold')
+    
+    # Inject just 'a)' or 'b)' left-aligned without any interference
+    ax.set_title(panel_labels[i], fontweight='bold', loc='left', fontsize=14)
 
 plt.tight_layout()
 plt.show()
