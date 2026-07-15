@@ -59,7 +59,6 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     configfilenew = os.path.join(config_folder_path, f"{storm}.conf")
     shutil.copy(configfiletemplate,configfilenew)
 
-
     #there is now a configuration file specific for this storm
     #time to edit that config file with the correct paths!
 
@@ -69,7 +68,6 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
 
     # Replace the target strings in configuration file template with new paths
     # or info that changes between storms
-
 
     # Wind paths
     if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
@@ -173,6 +171,35 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     filedata = filedata.replace('mask_path = data/mask/<YYYY><MM>_maskfile.nc', 'mask_path ='+storm_dir_relative+ '/Resampled_for_fluxengine_storm_timings_with_masks.nc')
     filedata = filedata.replace('mask_prod = mask_variable','mask_prod = analysis_mask')
     filedata = filedata.replace('mask_temporalChunking = chunk_size','mask_temporalChunking ='+ time_chunk_val)
+
+    # Additional section of code to allow inclusion of gamma
+    if run_name in ["MAXSS_RUN", "SSS_RUN"]:
+        # Storm runs use the active storm salinity-normalized pCO2 data
+        pco2_sss_file = '/Resampled_for_fluxengine_Ford_et_al_pco2.nc'
+    elif run_name == "REF_RUN":
+        # Reference and other sensitivity runs use background pre-storm reference data
+        pco2_sss_file = '/Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc'
+        
+    # Update the gamma sensitivity value based on the current run
+    if run_name in ["MAXSS_RUN", "SSS_RUN", "REF_RUN"]:
+        # Apply the actual gamma sensitivity value to storm and reference runs
+        filedata = filedata.replace('gamma = gamma_value', 'gamma = 1.0')
+        
+        #Update the pco2_sss paths and variables using your exact configuration placeholders
+        filedata = filedata.replace('pco2_sss_path = salinity_path', 'pco2_sss_path = ' + storm_dir_relative + pco2_sss_file)
+        filedata = filedata.replace('pco2_sss_prod = salinity_variable', 'pco2_sss_prod = pco2_sss')
+        
+        # add the correct chunking info
+        filedata = filedata.replace('pco2_sss_temporalChunking = numberoftimesteps','pco2_sss_temporalChunking ='+str(timestepsinfile))
+
+    else:
+        # Turn gamma OFF for isolated parameter sensitivity runs (e.g. WIND_RUN, SST_RUN)
+        filedata = filedata.replace('gamma = gamma_value', '#gamma = gamma_value')
+        
+        #comment out the pco2_sss paths, variables and chunking as not required
+        filedata = filedata.replace('pco2_sss_path = salinity_path', '#pco2_sss_path = salinity_path')
+        filedata = filedata.replace('pco2_sss_prod = salinity_variable', '#pco2_sss_prod = salinity_variable')
+        filedata = filedata.replace('pco2_sss_temporalChunking = numberoftimesteps','#pco2_sss_temporalChunking = numberoftimesteps')
 
     #note that mask_timeDimensionName already set in config file template
     #mask_timeDimensionName = time
