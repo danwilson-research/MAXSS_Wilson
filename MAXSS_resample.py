@@ -1490,11 +1490,11 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 all_pco2_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
                 all_conc_co2_air_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
                 all_reynolds_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
+                all_oks1_data_region_subset = np.empty((12, subset_lat_dim, subset_lon_dim), dtype=float)
 
                 # 6. LOOP THROUGH MONTHS
                 pco2_fill = None
-                vgas_fill = None
-                sst_fill = None
+    
                 for imonth in range(0, 12):
                     monthStr = f"{imonth+1:02d}"
                     monthAbbr = month_abbrs[imonth]
@@ -1544,12 +1544,14 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                             raw_pco2 = pco2_nc.variables["OBPC"][0, :, :] #this is the raw pco2 loaded in from Dan F (#Uexp-fnn-u) data
                             raw_air = pco2_nc.variables["V_gas"][0, :, :]
                             raw_sst = pco2_nc.variables["FT1_Kelvin_mean"][0, :, :]
+                            raw_oks1 = pco2_nc.variables["OKS1"][0, :, :]
 
                             # In the first loop get fillValue info from data (fall back to nan if no fillvalue)
                             if pco2_fill is None:
                                 pco2_fill = getattr(pco2_nc.variables["OBPC"], '_FillValue', np.nan)
                                 vgas_fill = getattr(pco2_nc.variables["V_gas"], '_FillValue', np.nan)
                                 sst_fill = getattr(pco2_nc.variables["FT1_Kelvin_mean"], '_FillValue', np.nan)
+                                oks1_fill = getattr(pco2_nc.variables["OKS1"], '_FillValue', np.nan)
 
                             # --- D. WRAP SOURCE DATA (Seamless Global) ---
                             # Wrap coords to close the global seam
@@ -1559,6 +1561,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                             pco2_wrapped = np.pad(raw_pco2, ((0,0), (1,1)), mode='wrap')
                             air_wrapped  = np.pad(raw_air,  ((0,0), (1,1)), mode='wrap')
                             sst_wrapped  = np.pad(raw_sst,  ((0,0), (1,1)), mode='wrap')
+                            oks1_wrapped = np.pad(raw_oks1, ((0,0), (1,1)), mode='wrap')
 
                             # Flatten Source for griddata
                             src_lon_grid_w, src_lat_grid_w = np.meshgrid(src_lon_wrapped, src_lat)
@@ -1567,6 +1570,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                             flat_pco2 = pco2_wrapped.flatten()
                             flat_air  = air_wrapped.flatten()
                             flat_sst  = sst_wrapped.flatten()
+                            flat_oks1 = oks1_wrapped.flatten()
 
                             # --- E. FILTER MASK (Fixes Land Bleeding) ---
                             # Only interpolate using valid ocean points
@@ -1576,6 +1580,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                             values_pco2_valid = flat_pco2[valid_mask]
                             values_air_valid  = flat_air[valid_mask]
                             values_sst_valid  = flat_sst[valid_mask]
+                            values_oks1_valid = flat_oks1[valid_mask]
 
                             # --- F. INTERPOLATE ---
                             all_pco2_data_region_subset[imonth, :, :] = griddata(
@@ -1595,9 +1600,14 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                                 values_sst_valid,
                                 (adjusted_region_grid_x, region_grid_y),
                                 method='linear')
+                            
+                            all_oks1_data_region_subset[imonth, :, :] = griddata(
+                                points_valid, values_oks1_valid,
+                                (adjusted_region_grid_x, region_grid_y),
+                                method='linear')
 
                             # --- G: POST-INTERPOLATION LAND MASK ---
-                            # G1. Build a Tree of your VALID source points (the ocean data)
+                            # G1. Build a Tree of VALID source points (the ocean data)
                             #    (points_valid is already defined in your code as the X/Y of real ocean data)
                             tree = cKDTree(points_valid)
 
@@ -1614,7 +1624,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                             dists_grid = dists.reshape(adjusted_region_grid_x.shape)
 
                             # G5. Apply the Mask
-                            #    The Ford dataset is likely 1x1 degree resolution.
+                            #    The Ford dataset is 1x1 degree resolution.
                             #    The diagonal of a 1x1 box is ~1.41 degrees.
                             #    So, if a point is > 1.5 degrees from data, it's likely in a "gap" (land).
                             GAP_THRESHOLD = 1.5  # Degrees. Adjust this if needed (e.g. 2.0 or 1.2)
@@ -1626,6 +1636,7 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                             all_pco2_data_region_subset[imonth, :, :][is_land_gap] = np.nan
                             all_conc_co2_air_data_region_subset[imonth, :, :][is_land_gap] = np.nan
                             all_reynolds_data_region_subset[imonth, :, :][is_land_gap] = np.nan
+                            all_oks1_data_region_subset[imonth, :, :][is_land_gap] = np.nan
 
                     except FileNotFoundError:
                         print(f"Warning: File not found for {monthAbbr}-{year}")
@@ -1638,6 +1649,8 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 conc_pco2_air_on_wind_grid[:] = np.nan
                 reynolds_co2_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float);
                 reynolds_co2_on_wind_grid[:] = np.nan
+                oks1_on_wind_grid = np.empty((wind_time_dimension, wind_lat_dimension, wind_lon_dimension), dtype=float)
+                oks1_on_wind_grid[:] = np.nan
 
                 # Loop through the wind timestamps, extract the month and use that to pick which pco2 data to use.
                 for wind_step in range(0, wind_time_dimension):
@@ -1647,26 +1660,30 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                     #need to index at 0 so -1 month
                     month=a[1]-1
 
-                    pco2_on_wind_grid[wind_step,:,:]=all_pco2_data_region_subset[month,:,:]
-                    conc_pco2_air_on_wind_grid[wind_step,:,:]=all_conc_co2_air_data_region_subset[month,:,:]
-                    reynolds_co2_on_wind_grid[wind_step,:,:]=all_reynolds_data_region_subset[month,:,:]
+                    pco2_on_wind_grid[wind_step,:,:] = all_pco2_data_region_subset[month,:,:]
+                    conc_pco2_air_on_wind_grid[wind_step,:,:] = all_conc_co2_air_data_region_subset[month,:,:]
+                    reynolds_co2_on_wind_grid[wind_step,:,:] = all_reynolds_data_region_subset[month,:,:]
+                    oks1_on_wind_grid[wind_step, :, :] = all_oks1_data_region_subset[month, :, :]
 
                 # 8. Apply the 3D analysis period mask
                 pco2_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
                 conc_pco2_air_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
                 reynolds_co2_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
+                oks1_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
 
                 # 9. Convert nan values to fill values
                 pco2_on_wind_grid = np.nan_to_num(pco2_on_wind_grid, nan=pco2_fill).astype('float32')
                 conc_pco2_air_on_wind_grid = np.nan_to_num(conc_pco2_air_on_wind_grid, nan=vgas_fill).astype('float32')
                 reynolds_co2_on_wind_grid = np.nan_to_num(reynolds_co2_on_wind_grid, nan=sst_fill).astype('float32')
+                oks1_on_wind_grid = np.nan_to_num(oks1_on_wind_grid, nan=oks1_fill).astype('float32')
 
                 del all_pco2_data_region_subset
                 del all_conc_co2_air_data_region_subset
                 del all_reynolds_data_region_subset
+                del all_oks1_data_region_subset
                 gc.collect()
 
-                # 9. save pco2 output into a netCDF
+                # 10. save pco2 output into a netCDF
                 processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, "Resampled_for_fluxengine_Ford_et_al_pco2.nc")
                 
                 ncout = Dataset(processedFilePath, 'w');
@@ -1710,6 +1727,13 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 var.units = "kelvin";
                 var.long_name = "Monthly Sea surface skin temperature resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = reynolds_co2_on_wind_grid;
+                
+                #pco2_sss variable derived from OKS1
+                var = ncout.createVariable("pco2_sss", float, ("time","lat", "lon"), fill_value=oks1_fill,
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension))
+                var.units = "count"
+                var.long_name = "Monthly salinity in sea water resampled to hourly on a 0.25X0.25 degree spatial resolution"
+                var[:] = oks1_on_wind_grid
 
                 ncout.close();
 
@@ -1720,39 +1744,39 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 pre_storm_pco2 = pco2_on_wind_grid.copy()
                 pre_storm_v_gas = conc_pco2_air_on_wind_grid.copy()
                 pre_storm_reynolds = reynolds_co2_on_wind_grid.copy()
+                pre_storm_oks1 = oks1_on_wind_grid.copy()
 
                 # 2. Apply the dynamic pre-storm mask to isolate only pre-storm data
                 pre_storm_pco2[pre_storm_mask_3d == 0] = np.nan
                 pre_storm_v_gas[pre_storm_mask_3d == 0] = np.nan
                 pre_storm_reynolds[pre_storm_mask_3d == 0] = np.nan
+                pre_storm_oks1[pre_storm_mask_3d == 0] = np.nan
 
                 # 3. Calculate the median ONLY inside the pre-storm window
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", category=RuntimeWarning)
                     pco2_prestormref_2d = np.nanmedian(pre_storm_pco2, axis=0)
-
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=RuntimeWarning)
                     v_gas_prestormref_2d = np.nanmedian(pre_storm_v_gas, axis=0)
-
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=RuntimeWarning)
                     reynolds_prestormref_2d = np.nanmedian(pre_storm_reynolds, axis=0)
+                    oks1_prestormref_2d = np.nanmedian(pre_storm_oks1, axis=0)
 
                 # 4. Tile the 2D data into 3D
                 pco2_on_wind_grid_prestormref = np.tile(pco2_prestormref_2d, (wind_time_dimension, 1, 1))
                 v_gas_on_wind_grid_prestormref = np.tile(v_gas_prestormref_2d, (wind_time_dimension, 1, 1))
                 reynolds_temp_on_wind_grid_prestormref = np.tile(reynolds_prestormref_2d, (wind_time_dimension, 1, 1))
+                oks1_on_wind_grid_prestormref = np.tile(oks1_prestormref_2d, (wind_time_dimension, 1, 1))
 
                 # 5. Apply the 3D analysis period mask
                 pco2_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
                 v_gas_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
                 reynolds_temp_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
+                oks1_on_wind_grid_prestormref[analysis_period_mask_3d == 0] = np.nan
 
-                # 6. Clean up NaNs with the correct pco2 fill value
+                # 6. Clean up NaNs with the correct fill value
                 pco2_on_wind_grid_prestormref = np.nan_to_num(pco2_on_wind_grid_prestormref, nan=pco2_fill).astype('float32')
                 v_gas_on_wind_grid_prestormref = np.nan_to_num(v_gas_on_wind_grid_prestormref, nan=vgas_fill).astype('float32')
                 reynolds_temp_on_wind_grid_prestormref = np.nan_to_num(reynolds_temp_on_wind_grid_prestormref, nan=sst_fill).astype('float32')
+                oks1_on_wind_grid_prestormref = np.nan_to_num(oks1_on_wind_grid_prestormref, nan=oks1_fill).astype('float32')
 
                 # 7. save pco2 output into a netCDF
                 processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, "Resampled_for_fluxengine_Ford_et_al_pco2_pre_storm_reference.nc")
@@ -1795,6 +1819,13 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 var.units = "kelvin";
                 var.long_name = "Dynamic Pre-storm (15-13 days) median of monthly Sea surface skin temperature resampled to hourly on a 0.25X0.25 degree spatial resolution";
                 var[:] = reynolds_temp_on_wind_grid_prestormref;
+                
+                #pre-storm reference variable for pco2_sss derived from OKS1
+                var = ncout.createVariable("pco2_sss", float, ("time","lat", "lon"), fill_value=oks1_fill,
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(1, wind_lat_dimension, wind_lon_dimension))
+                var.units = "count"
+                var.long_name = "Dynamic Pre-storm (15-13 days) median of monthly salinity in sea water resampled to hourly on a 0.25X0.25 degree spatial resolution"
+                var[:] = oks1_on_wind_grid_prestormref
 
                 ncout.close();
 
@@ -1802,14 +1833,17 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                 del pre_storm_pco2
                 del pre_storm_v_gas
                 del pre_storm_reynolds
+                del pre_storm_oks1
 
                 del pco2_on_wind_grid
                 del conc_pco2_air_on_wind_grid
                 del reynolds_co2_on_wind_grid
+                del oks1_on_wind_grid
 
                 del pco2_on_wind_grid_prestormref
                 del v_gas_on_wind_grid_prestormref
                 del reynolds_temp_on_wind_grid_prestormref
+                del oks1_on_wind_grid_prestormref
                 gc.collect()
 
                 # Print status update

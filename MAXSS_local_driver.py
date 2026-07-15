@@ -55,7 +55,7 @@ runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
 MAXSS_regions = ["north-atlantic"]
 specified_years = ['2010']
 
-verbose = False
+verbose = False  
 
 #Specify which storms you would like to run # if no storms specified, all storms run
 specified_storms = ["ALEX"] #["RINA","AL052010_","ALEX" "BONNIE", "MARIA", , "COLIN", "DANIELLE"]
