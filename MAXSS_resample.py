@@ -1587,24 +1587,24 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
                                 points_valid,
                                 values_pco2_valid,
                                 (adjusted_region_grid_x, region_grid_y),
-                                method='nearest')
+                                method='linear')
 
                             all_conc_co2_air_data_region_subset[imonth, :, :] = griddata(
                                 points_valid,
                                 values_air_valid,
                                 (adjusted_region_grid_x, region_grid_y),
-                                method='nearest')
+                                method='linear')
 
                             all_reynolds_data_region_subset[imonth, :, :] = griddata(
                                 points_valid,
                                 values_sst_valid,
                                 (adjusted_region_grid_x, region_grid_y),
-                                method='nearest')
+                                method='linear')
                             
                             all_oks1_data_region_subset[imonth, :, :] = griddata(
                                 points_valid, values_oks1_valid,
                                 (adjusted_region_grid_x, region_grid_y),
-                                method='nearest')
+                                method='linear')
 
                             # --- G: POST-INTERPOLATION LAND MASK ---
                             # G1. Build a Tree of VALID source points (the ocean data)
