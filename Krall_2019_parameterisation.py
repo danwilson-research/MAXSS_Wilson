@@ -55,30 +55,30 @@ class k_Krall2019(KCalculationBase):
                 
                 #Krall Ks for Seawater
                 # for friction velocity between 0.75 and 5.8 cms-1
-                if (friction_velocity[i] >= 0.75) and (friction_velocity[i] < 5.8):
+                if (self.friction_velocity[i] >= 0.75) and (self.friction_velocity[i] < 5.8):
                     self.ks[i] = (3600/7.19)*(self.friction_velocity[i])*pow(600,-0.5); 
                 # for friction velocity between 5.8 and 15 cms-1
-                elif (friction_velocity[i] >= 5.8) and (friction_velocity[i] <= 15):
+                elif (self.friction_velocity[i] >= 5.8) and (self.friction_velocity[i] <= 15):
                     self.ks[i] = (0.605)*pow(self.friction_velocity[i],3); 
                 else:
                     self.ks[i] = DataLayer.missing_value;
                     
                 #Krall Kc for Seawater
                 # for friction velocity between 0.75 and 5.8 cms-1
-                if (friction_velocity[i] >= 0.75) and (friction_velocity[i] < 5.8):
+                if (self.friction_velocity[i] >= 0.75) and (self.friction_velocity[i] < 5.8):
                     self.kc[i] = 0; 
                 # for friction velocity between 5.8 and 15 cms-1
-                elif (friction_velocity[i] >= 5.8) and (friction_velocity[i] <= 15):
+                elif (self.friction_velocity[i] >= 5.8) and (self.friction_velocity[i] <= 15):
                     self.kc[i] = (51.5)*pow(self.friction_velocity[i]-5.8,1.82); 
                 else: 
                     self.kc[i] = DataLayer.missing_value;
             
                 #Krall Kr for Seawater
                 # for friction velocity between 0.75 and 5.8 cms-1
-                if (friction_velocity[i] >= 0.75) and (friction_velocity[i] < 5.8):
+                if (self.friction_velocity[i] >= 0.75) and (self.friction_velocity[i] < 5.8):
                     self.kr[i] = 0; 
                 # for friction velocity between 5.8 and 15 cms-1
-                elif (friction_velocity[i] >= 5.8) and (friction_velocity[i] <= 15):
+                elif (self.friction_velocity[i] >= 5.8) and (self.friction_velocity[i] <= 15):
                     self.kr[i] = (1.3)*pow(self.friction_velocity[i]-5.8,1.75); 
                 else: 
                     self.kr[i] = DataLayer.missing_value;
