@@ -22,6 +22,7 @@ when applied in the open ocean.
 
 from fluxengine.core.rate_parameterisation import KCalculationBase
 from fluxengine.core.datalayer import DataLayer
+import numpy as np
 
 class k_Krall2019(KCalculationBase):
     def __init__(self):
@@ -48,7 +49,7 @@ class k_Krall2019(KCalculationBase):
             return False;
         
         #determine the Krall et al., 2019 k relationship
-        for i in arange(len(self.k)):   
+        for i in range(len(self.k)):   
             self.k[i] = DataLayer.missing_value
             if ( (self.friction_velocity[i] != DataLayer.missing_value) and (self.solubility_skin[i] != DataLayer.missing_value) and (self.scskin[i] > 0.0) ):
                 
@@ -83,7 +84,7 @@ class k_Krall2019(KCalculationBase):
                     self.kr[i] = DataLayer.missing_value;
                     
                 # equation 11 from Krall 19
-                self.k[i] = (self.ks[i] * sqrt(600.0/self.scskin[i]))+(self.kr[i]/self.solubility_skin[i])*(1-exp(((self.solubility_skin[i]*-1*self.kc[i])/self.kr[i])*(sqrt(600.0/self.scskin[i]))))
+                self.k[i] = (self.ks[i] * np.sqrt(600.0/self.scskin[i]))+(self.kr[i]/self.solubility_skin[i])*(1-np.exp(((self.solubility_skin[i]*-1*self.kc[i])/self.kr[i])*(np.sqrt(600.0/self.scskin[i]))))
             else:
                 self.k[i] = DataLayer.missing_value
         
