@@ -1829,26 +1829,42 @@ def MAXSS_resample_main(MAXSS_working_directory = "E:/MAXSS_working_directory", 
 
                 ncout.close();
 
-                # 8. delete no longer required variables
-                del pre_storm_pco2
-                del pre_storm_v_gas
-                del pre_storm_reynolds
-                del pre_storm_oks1
+                # 8. Clean up all remaining storm-level variables from memory
+                vars_to_delete = [
+                    # pCO2 Variables
+                    'pre_storm_pco2', 'pre_storm_v_gas', 'pre_storm_reynolds', 'pre_storm_oks1',
+                    'pco2_on_wind_grid', 'conc_pco2_air_on_wind_grid', 'reynolds_co2_on_wind_grid', 'oks1_on_wind_grid',
+                    'pco2_on_wind_grid_prestormref', 'v_gas_on_wind_grid_prestormref', 
+                    'reynolds_temp_on_wind_grid_prestormref', 'oks1_on_wind_grid_prestormref',
+                    'pco2_prestormref_2d', 'v_gas_prestormref_2d', 'reynolds_prestormref_2d', 'oks1_prestormref_2d',
+                    
+                    # Wind & Spatial Variables
+                    'spatial_mask', 'track_times', 'ever_in_storm_mask', 'first_hit_indices',
+                    'last_hit_indices', 'last_hit_indices_reversed', 'reversed_mask',
+                    'wind_eastward', 'wind_northward', 'wind_speed', 'wind_moment2', 
+                    'wind_lat', 'wind_lon', 'wind_time', 'wind_dates', 'wind_land_fraction',
+                    
+                    # Timing & Mask Arrays
+                    'storm_arrival_times_numeric', 'storm_departure_times_numeric',
+                    'pre_storm_ref_period_start', 'pre_storm_ref_period_start_numeric',
+                    'pre_storm_ref_period_end', 'pre_storm_ref_period_end_numeric',
+                    'post_storm_analysis_end', 'post_storm_analysis_end_numeric',
+                    'valid_arrival_datetimes', 'valid_pre_storm_start_times', 'valid_pre_storm_end_times',
+                    'valid_departure_datetimes', 'valid_post_storm_end_times',
+                    'valid_numeric_times', 'valid_departure_numeric', 'full_data_times', 'full_data_times_3d',
+                    'analysis_period_mask_3d', 'pre_storm_mask_3d', 'hit_multiple_times_mask',
+                    
+                    # Coordinate Meshes & Interpolation Grid
+                    'region_grid_x', 'region_grid_y', 'adjusted_region_grid_x', 'target_points_flat', 'dists_grid'
+                ]
 
-                del pco2_on_wind_grid
-                del conc_pco2_air_on_wind_grid
-                del reynolds_co2_on_wind_grid
-                del oks1_on_wind_grid
+                # Safely delete any variable in the list if it exists in local memory
+                for var_name in vars_to_delete:
+                    if var_name in locals():
+                        del locals()[var_name]
 
-                del pco2_on_wind_grid_prestormref
-                del v_gas_on_wind_grid_prestormref
-                del reynolds_temp_on_wind_grid_prestormref
-                del oks1_on_wind_grid_prestormref
+                # Force Python's garbage collector to reclaim RAM
                 gc.collect()
-
-                # Print status update
-                print("PCO2 regridded for Storm = "+storm)
-                print(storm + " RESAMPLING COMPLETED")
 
 
 # if __name__ == "__main__":
