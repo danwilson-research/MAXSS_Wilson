@@ -51,7 +51,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     config_folder_path = path.join("output", "configs", run_name, "maxss","storm-atlas","tropical","ibtracs", region, year)
     
     if not os.path.exists(config_folder_path):
-        os.makedirs(config_folder_path)
+        os.makedirs(config_folder_path, exist_ok=True)
 
     #copy configuration file template
     # configfiletemplate="E:/MAXSS_Wilson/MAXSS_configuration_file_template.conf" # DJF 09/05/2026: Added as function input
