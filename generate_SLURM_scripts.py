@@ -7,7 +7,7 @@ import subprocess
 
 ## Step one - read the directory containing input data for fluxengine ##
 MAXSS_regions = ["north-atlantic"]
-specified_years = ["2011"]
+specified_years = ["2019"]
 
 MAXSS_working_directory = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/"
 SLURM_standard_script = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_Wilson/SLURM_standard_script.sh"

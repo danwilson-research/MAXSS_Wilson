@@ -7,7 +7,7 @@
 #SBATCH --nodes=1                           # Number of full nodes to use
 #SBATCH --ntasks-per-node=1                 # Run a single task on each node
 #SBATCH --ntasks=1                          # Run a single task (increase this value for parallelisation across CPUs)
-#SBATCH --mem=23000                         # Memory per node specification is in MB. It is optional. 
+#SBATCH --mem=30000                         # Memory per node specification is in MB. It is optional. 
 #SBATCH --output=test-single-core_throttle_-%j.out    # Standard output and error log
 #SBATCH --mail-type=ALL                     # Mail events (NONE)
 #SBATCH --requeue                          # Specifies that the job will be requeued after a node failure.
@@ -21,7 +21,7 @@ module load Workspace/v1
 
 # Setup Conda
 source ~/miniforge3/etc/profile.d/conda.sh
-conda activate fluxengine_4_2
+conda activate fluxengine_4_2_pre3
 
 # Change to your target save location
 cd /nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_Wilson/
