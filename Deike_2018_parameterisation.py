@@ -41,7 +41,7 @@ class k_Deike2018(KCalculationBase):
         return ["friction_velocity", "sig_wv_ht","solubility_skin", "scskin"];
 
     def output_names(self):
-        return ["k"];
+        return ["k","kb","kd"]; # Here k (total k), kd (direct k) and kb (bubble k) are output
 
     def __call__(self, data):
         function = "(rate_parameterisation.py: k_Deike2018.__call__)";
@@ -50,14 +50,14 @@ class k_Deike2018(KCalculationBase):
             #for ease of access, simply assign attributes to each input/output.
             for name in self.input_names() + self.output_names():
                 setattr(self, name, data[name].fdata)
-            data["k"].standardName="gas_transfer_velocity_of_carbon_dioxide" 
+            data["k"].standardName="gas_transfer_velocity_of_carbon_dioxide"
             data["k"].longName="Deike et al., 2018 (D18) gas transfer velocity"
         except KeyError as e:
             print("%s: Required data layer for selected k parameterisation was not found." % function)
             print(type(e), e.args)
             return False
 
-        
+
         # This is the implementation of Deike et.al 2018 (their equation 12)
         A_nb=1.55e-4 # Deike note this constant is the non breaking constant from Fairall et al., 2011
         A_b=1e-5
@@ -75,6 +75,8 @@ class k_Deike2018(KCalculationBase):
         )
 
         self.k[:] = DataLayer.missing_value
+        self.kb[:] = DataLayer.missing_value # Setting up arrays
+        self.kd[:] = DataLayer.missing_value
 
         # Vectorized calculations for valid points
         u_star = self.friction_velocity[valid_mask]
@@ -94,5 +96,7 @@ class k_Deike2018(KCalculationBase):
 
         # 3. Total transfer velocity converted to cm/h
         self.k[valid_mask] = (k_nb_ms + k_b_ms) * 360000.0
+        self.kd[valid_mask] = (k_mb_ms) * 360000.0 # Adding the direct and bubble k to the outputs
+        self.kb[valid_mask] = (k_b_ms) * 360000.0
 
         return True
