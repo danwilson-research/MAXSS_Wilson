@@ -96,7 +96,7 @@ class k_Deike2018(KCalculationBase):
 
         # 3. Total transfer velocity converted to cm/h
         self.k[valid_mask] = (k_nb_ms + k_b_ms) * 360000.0
-        self.kd[valid_mask] = (k_mb_ms) * 360000.0 # Adding the direct and bubble k to the outputs
+        self.kd[valid_mask] = (k_nb_ms) * 360000.0 # Adding the direct and bubble k to the outputs
         self.kb[valid_mask] = (k_b_ms) * 360000.0
 
         return True
