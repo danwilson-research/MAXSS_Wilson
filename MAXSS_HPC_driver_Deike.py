@@ -12,6 +12,15 @@ import MAXSS_run as ru
 import calculate_hourly_flux_across_storm as c_flux
 from os import path
 import importlib.util
+import sys
+
+## Require explicit storm argument — exit with an error if missing
+if len(sys.argv) < 2:
+    print("ERROR: No storm name provided! Usage: python MAXSS_HPC_driver_Deike.py <STORM_NAME>")
+    sys.exit(1)
+
+specified_storms = [sys.argv[1]]
+print(f"Running driver for storm: {specified_storms}")
 
 ## Manually import the updated resampling script.
 # Path to your resample script
@@ -43,7 +52,7 @@ swh_directory = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_di
 verbose = False
 
 #Specify which storms you would like to run # if no storms specified, all storms run
-specified_storms = ["DORIAN", "LORENZO", "HUMBERTO", "JERRY", "BARRY", "ANDREA", "AL032019"]
+#specified_storms = ["DORIAN", "LORENZO", "HUMBERTO", "JERRY", "BARRY", "ANDREA", "AL032019"]
 
 #When set to True, only MAXSS_main run is computed and only first 5 days modelled.
 test_run = False
