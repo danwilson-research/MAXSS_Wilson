@@ -69,12 +69,12 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     # Replace the target strings in configuration file template with new paths
     # or info that changes between storms
     
-    #Specify the significant wave height which is needed for Deike method
-    
-    filedata = filedata.replace('#sig_wv_ht_path = path', 'sig_wv_ht_path = ' + storm_dir_relative + '/Resampled_for_fluxengine_MAXSS_ERA5_sig_wave_height.nc')
-    filedata = filedata.replace('#sig_wv_ht_prod = swhcor_mean', 'sig_wv_ht_prod = significant_wave_height')
-    filedata = filedata.replace('#sig_wv_ht_stddev_prod = auto', 'sig_wv_ht_stddev_prod = auto')
-    filedata = filedata.replace('#sig_wv_ht_count_prod = auto', 'sig_wv_ht_count_prod = auto')
+    ## Specify the significant wave height which is needed for Deike method
+    filedata = filedata.replace('sig_wv_ht_path = path', 'sig_wv_ht_path = ' + storm_dir_relative + '/Resampled_for_fluxengine_MAXSS_ERA5_sig_wave_height.nc')
+    filedata = filedata.replace('sig_wv_ht_prod = swhcor_mean', 'sig_wv_ht_prod = significant_wave_height')
+    filedata = filedata.replace('sig_wv_ht_stddev_prod = auto', 'sig_wv_ht_stddev_prod = auto')
+    filedata = filedata.replace('sig_wv_ht_count_prod = auto', 'sig_wv_ht_count_prod = auto')
+    filedata = filedata.replace('sig_wv_ht_temporalChunking = numberoftimesteps','sig_wv_ht_temporalChunking = '+str(timestepsinfile))
     
     # Wind paths
     if run_name=="MAXSS_RUN" or run_name=="WIND_RUN":
