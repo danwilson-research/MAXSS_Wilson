@@ -28,7 +28,7 @@ def calculate_ellipsoidal_areas(ds, res=0.25):
 
     return xr.DataArray(row_areas, coords={'latitude': storm_lat}, dims='latitude')
 
-def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, runs, MAXSS_regions, specified_storms):
+def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, runs, MAXSS_regions, specified_storms, salinity_threshold=10.0):
     master_summary = {}
     
     for region in MAXSS_regions:
@@ -42,7 +42,7 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
             for storm_path in storm_directory_list:
                 storm_name = os.path.basename(os.path.normpath(storm_path))
 
-                # --- RESTORED: Fragment skipping print statement ---
+                # --- Fragment skipping print statement ---
                 if len(specified_storms) > 0:
                     if not any(fragment in storm_path for fragment in specified_storms):
                         print(f"Skipping storm (no fragment match): {storm_path}")
@@ -63,7 +63,7 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                     storm_run_path = path.join(MAXSS_working_directory, "output", run_name, "maxss/storm-atlas/tropical/ibtracs", region, year_name, storm_name)
                     fluxengine_files = sorted(glob(os.path.join(storm_run_path, "*.nc")))
 
-                    # --- RESTORED: Missing run skip print statement ---
+                    # --- Missing run skip print statement ---
                     if not fluxengine_files:
                         print(f"   -> Run {run_name} not found. Skipping.")
                         continue
@@ -81,6 +81,15 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                         valid_min = ds.OF.attrs["valid_min"]
                         valid_max = ds.OF.attrs["valid_max"]
                         clean_OF = ds.OF.where(np.isfinite(ds.OF) & (ds.OF >= valid_min) & (ds.OF <= valid_max))
+
+                        # Exclude estuarine pixels if EITHER salinity input falls below salinity_threshold
+                        if salinity_threshold is not None:
+                            is_estuarine = xr.zeros_like(clean_OF, dtype=bool)
+                            if "pco2_sss" in ds:
+                                is_estuarine = is_estuarine | (ds.pco2_sss < salinity_threshold) | (~np.isfinite(ds.pco2_sss))
+                            if "OKS1" in ds:
+                                is_estuarine = is_estuarine | (ds.OKS1 < salinity_threshold) | (~np.isfinite(ds.OKS1))
+                            clean_OF = clean_OF.where(~is_estuarine)
                           
                         mass_map = clean_OF * grid_areas * (1.0 / 24.0) * current_water_map
                         hourly_fluxes_tg = mass_map.sum(dim=['latitude', 'longitude'], skipna=True) / 1e12
@@ -105,7 +114,7 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                         ds_out['time'].encoding['dtype'] = 'i8'
                         ds_out.to_netcdf(processedFilePath)
 
-                    # --- RESTORED: Run success summary print statement ---
+                    # --- Run success summary print statement ---
                     print(f"      - {run_name}: {storm_total_tg:.6f} Tg")
 
                     # --- UPDATE MASTER SUMMARY ---
