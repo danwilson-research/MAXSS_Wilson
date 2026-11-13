@@ -103,10 +103,13 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                         os.makedirs(out_folder, exist_ok=True)
                         processedFilePath = os.path.join(out_folder, f"{storm_name}_{run_name}.nc")
 
+                        #Add salinity threshold to the netcdf metadata
+                        thresh_attr = f"{salinity_threshold} PSU" if salinity_threshold is not None else "None"
+                        
                         ds_out = xr.Dataset(
                             data_vars={
                                 "Hourly_flux": (["time"], hourly_fluxes_arr, {"units": "Tg C hr-1"}),
-                                "Total_flux": ([], storm_total_tg, {"units": "Tg C"})
+                                "Total_flux": ([], storm_total_tg, {"units": "Tg C", "salinity_threshold": thresh_attr})
                             },
                             coords={"time": time_vals}
                         )
