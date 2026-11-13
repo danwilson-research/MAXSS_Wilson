@@ -76,7 +76,13 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                                     
                         # --- VECTORIZED MATH BLOCK ---
                         current_water_map = water_proportion.reindex_like(ds, method="nearest")
-                        mass_map = ds.OF * grid_areas * (1.0 / 24.0) * current_water_map
+                        
+                        # Enforce FluxEngine's valid_min / valid_max (which xarray ignores by default)
+                        valid_min = ds.OF.attrs["valid_min"]
+                        valid_max = ds.OF.attrs["valid_max"]
+                        clean_OF = ds.OF.where(np.isfinite(ds.OF) & (ds.OF >= valid_min) & (ds.OF <= valid_max))
+                          
+                        mass_map = clean_OF * grid_areas * (1.0 / 24.0) * current_water_map
                         hourly_fluxes_tg = mass_map.sum(dim=['latitude', 'longitude'], skipna=True) / 1e12
                         
                         hourly_fluxes_arr = hourly_fluxes_tg.values
