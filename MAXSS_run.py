@@ -38,6 +38,7 @@ variables_to_exclude = [
         "pco2_sst", "rain", "sstskin", "sstskin_count", "sstskin_stddev",
         "vgas_air", "windu10_moment2", "windu10_moment3",
         "windu10_momentthreeseven", "windu10"]
+#variables_to_exclude = ["test"]
 
 
 def get_datetimes(secondsSince1970):

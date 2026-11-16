@@ -25,7 +25,7 @@ specified_years = ['2010']
 verbose = True
 
 #Specify which storms you would like to run # if no storms specified, all storms run
-specified_storms = ["ALEX"] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
+specified_storms = [] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
 
 #When set to True, only MAXSS_main run is computed and only first 5 days modelled.
 test_run = False

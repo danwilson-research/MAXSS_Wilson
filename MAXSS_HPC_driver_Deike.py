@@ -2,7 +2,7 @@
 
 Driver script for running the MAXSS analysis locally
 
-@Author: Daniel Wilson, based on teomplate from Daniel Ford
+@Author: Daniel Wilson, based on template from Daniel Ford
 
 """
 
@@ -14,13 +14,13 @@ from os import path
 import importlib.util
 import sys
 
-## Require explicit storm argument — exit with an error if missing
-if len(sys.argv) < 2:
-    print("ERROR: No storm name provided! Usage: python MAXSS_HPC_driver_Deike.py <STORM_NAME>")
-    sys.exit(1)
-
-specified_storms = [sys.argv[1]]
-print(f"Running driver for storm: {specified_storms}")
+## Use command-line storm arguments if provided; otherwise default to [] (all storms)
+if len(sys.argv) > 1:
+    specified_storms = sys.argv[1:]
+    print(f"Running driver for specified storms: {specified_storms}")
+else:
+    specified_storms = []
+    print("No storm argument provided — running driver for ALL storms.")
 
 ## Manually import the updated resampling script.
 # Path to your resample script
@@ -45,7 +45,7 @@ netcdf_output_root = path.join(MAXSS_working_directory, "output/Spatially_integr
 runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
         "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
 MAXSS_regions = ["north-atlantic"]
-specified_years = ['2019']
+specified_years = ['']
 
 swh_directory = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/ERA5_sig_wv_ht/"
 
@@ -79,8 +79,7 @@ test_run = False
 ##### remove testing section onceno longer testing ####
 
 #re.MAXSS_resample_main(MAXSS_working_directory=MAXSS_working_directory,
-#    downloadedRoot=downloadedRoot, swh_directory=swh_directory,  # <-- Pass swh_directory keyword argument
-#    specified_storms=specified_storms, MAXSS_regions=MAXSS_regions, specified_years=specified_years,)
+#    downloadedRoot=downloadedRoot, swh_directory=swh_directory, specified_storms=specified_storms, MAXSS_regions=MAXSS_regions, specified_years=specified_years) # <-- Pass swh_directory keyword argument
 
 ru.MAXSS_flux_run(MAXSS_working_directory, configfiletemplate, verbose, specified_storms, test_run, rate_parameterisation='/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_Wilson/Deike_2018_parameterisation.py')
 

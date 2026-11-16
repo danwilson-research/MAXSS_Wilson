@@ -17,15 +17,18 @@ downloadedRoot = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_d
 configfiletemplate="/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_Wilson/MAXSS_configuration_file_template.conf"
 output_base = '/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/output/Spatially_integrated_fluxes'
 netcdf_output_root = path.join(MAXSS_working_directory, "output/Spatially_integrated_fluxes/maxss/storm-atlas/tropical/ibtracs")
-runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
-        "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
+runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN", "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
+
 MAXSS_regions = ["north-atlantic"]
 specified_years = []
 
 verbose = False
 
 #Specify which storms you would like to run # if no storms specified, all storms run
-specified_storms = [] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
+specified_storms = [] 
+
+
+#['DORIAN', 'LORENZO', 'HUMBERTO', 'JERRY', 'BARRY', 'ANDREA', 'AL032019'] #["RINA", "BONNIE", "MARIA", "ALEX", "COLIN", "AL052010_"]
 
 #When set to True, only MAXSS_main run is computed and only first 5 days modelled.
 test_run = False
