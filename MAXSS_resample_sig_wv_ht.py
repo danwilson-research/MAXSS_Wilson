@@ -1775,42 +1775,64 @@ def MAXSS_resample_main(
 
                 gc.collect()
                 print(
-                    "SWH pre-storm reference calculated and saved for Storm = "
-                    + storm
-                )
+                    "SWH pre-storm reference calculated and saved for Storm = " + storm)
                 
-                # ## MAXSS Land fraction ##
-                # # create dataset and provide dimensions
-                # winds_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_MAXSS_HIST_TC_L4.nc"))
                 
-                # wind_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
-
-                # processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_land_fraction.nc")
+                ## MAXSS Land fraction & Sea Ice fraction ##
+                # create dataset and provide dimensions
+                winds_nc = nc.Dataset(path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, f"MAXSS_HIST_TC_{region_id}_{year}_{storm_id}_MAXSS_HIST_TC_L4.nc"))
                 
-                # ncout = Dataset(processedFilePath, 'w');
+                wind_land_fraction = winds_nc.variables['__eo_land_fraction'][0]
 
-                # ncout.createDimension("latitude", wind_lat_dimension);
-                # ncout.createDimension("longitude", wind_lon_dimension);
+                wind_time_var = winds_nc.variables['time']
+                wind_time = wind_time_var[:]
+                wind_time_units = getattr(wind_time_var, "units", "seconds since 1970-01-01 00:00:00")
+                wind_time_calendar = getattr(wind_time_var, "calendar", "standard")
+                wind_time_dimension = len(wind_time)
 
-                # #dimension variables
-                # var = ncout.createVariable("latitude", float, ("latitude",));
-                # var.units = "lat (degrees North)";
-                # var[:] = wind_lat;
+                ice_var = winds_nc.variables['__eo_sea_ice_fraction']
+                wind_sea_ice_fraction = ice_var[:]
+                ice_fill_value = getattr(ice_var, "_FillValue", 1.0E20)
 
-                # var = ncout.createVariable("longitude", float, ("longitude",));
-                # var.units = "lon (degrees East)";
-                # var[:] = wind_lon;
+                processedFilePath = path.join(MAXSS_working_directory, "maxss", "storm-atlas", "tropical", "ibtracs", region, year, storm, "Resampled_for_fluxengine_MAXSS_land_fraction.nc")
+                
+                ncout = Dataset(processedFilePath, 'w');
 
-                # #data variables
-                # var = ncout.createVariable("land_proportion", float, ("latitude", "longitude"),
-                #                            zlib=True, complevel=1, shuffle=True, chunksizes=(wind_lat_dimension, wind_lon_dimension));
-                # var.units = "1";
-                # var.long_name = "Fraction of grid cell as land (0-1)";
-                # var[:] = wind_land_fraction;
+                ncout.createDimension("time", wind_time_dimension);
+                ncout.createDimension("latitude", wind_lat_dimension);
+                ncout.createDimension("longitude", wind_lon_dimension);
 
-                # ncout.close();
+                #dimension variables
+                var = ncout.createVariable("time", wind_time.dtype, ("time",));
+                var.units = wind_time_units;
+                var.calendar = wind_time_calendar;
+                var[:] = wind_time;
+            
+                var = ncout.createVariable("latitude", float, ("latitude",));
+                var.units = "lat (degrees North)";
+                var[:] = wind_lat;
 
-                # print("Land fraction for Storm = "+storm)
+                var = ncout.createVariable("longitude", float, ("longitude",));
+                var.units = "lon (degrees East)";
+                var[:] = wind_lon;
+
+                #data variables
+                var = ncout.createVariable("land_proportion", float, ("latitude", "longitude"),
+                                           zlib=True, complevel=1, shuffle=True, chunksizes=(wind_lat_dimension, wind_lon_dimension));
+                var.units = "1";
+                var.long_name = "Fraction of grid cell as land (0-1)";
+                var[:] = wind_land_fraction;
+
+                var = ncout.createVariable("sea_ice_proportion", float, ("time", "latitude", "longitude"),
+                                           fill_value=ice_fill_value, zlib=True, complevel=1, shuffle=True,
+                                           chunksizes=(min(24, wind_time_dimension), wind_lat_dimension, wind_lon_dimension));
+                var.units = "1";
+                var.long_name = "Fraction of grid cell occupied by sea ice (0-1)";
+                var[:] = wind_sea_ice_fraction;
+
+                ncout.close();
+
+                print("Land and sea ice fraction for Storm = "+storm)
 
 
                 # ## PCO2 Data ##
