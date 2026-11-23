@@ -50,8 +50,14 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
 
                 land_fraction_path = path.join(MAXSS_working_directory, "maxss/storm-atlas/tropical/ibtracs/", region, year_name, storm_name, 'Resampled_for_fluxengine_MAXSS_land_fraction.nc')
 
+                # Load both land_proportion and sea_ice_proportion from the single mask file
                 with xr.open_dataset(land_fraction_path) as lf_ds:
                     land_fraction = lf_ds.land_proportion.load()
+                    if "sea_ice_proportion" in lf_ds:
+                        sea_ice_proportion = lf_ds.sea_ice_proportion.load()
+                    else:
+                        print(f"   -> Warning: 'sea_ice_proportion' not found in {land_fraction_path}; assuming 0 ice.")
+                        sea_ice_proportion = None
                 
                 land_fraction = land_fraction.where(land_fraction <= 1.0, 1.0)
                 water_proportion = 1.0 - land_fraction
@@ -76,6 +82,13 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                                     
                         # --- VECTORIZED MATH BLOCK ---
                         current_water_map = water_proportion.reindex_like(ds, method="nearest")
+
+                        # Align sea ice in (time, latitude, longitude) and scale linearly by (1 - f_ice)
+                        if sea_ice_proportion is not None:
+                            current_ice_map = sea_ice_proportion.reindex_like(ds, method="nearest").fillna(0.0).clip(min=0.0, max=1.0)
+                            ice_free_proportion = 1.0 - current_ice_map
+                        else:
+                            ice_free_proportion = 1.0
                         
                         # Enforce FluxEngine's valid_min / valid_max (which xarray ignores by default)
                         valid_min = ds.OF.attrs["valid_min"]
@@ -91,7 +104,7 @@ def calc_hourly_flux(MAXSS_working_directory, output_base, netcdf_output_root, r
                                 is_estuarine = is_estuarine | (ds.OKS1 < salinity_threshold) | (~np.isfinite(ds.OKS1))
                             clean_OF = clean_OF.where(~is_estuarine)
                           
-                        mass_map = clean_OF * grid_areas * (1.0 / 24.0) * current_water_map
+                        mass_map = clean_OF * grid_areas * (1.0 / 24.0) * current_water_map * ice_free_proportion
                         hourly_fluxes_tg = mass_map.sum(dim=['latitude', 'longitude'], skipna=True) / 1e12
                         
                         hourly_fluxes_arr = hourly_fluxes_tg.values
