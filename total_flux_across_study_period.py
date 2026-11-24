@@ -26,8 +26,8 @@ PARAM_CONFIG = {
         "output_dir": path.join(MAXSS_working_directory, "Deike_output", "Spatially_integrated_fluxes"),
     },
     "Nightingale": {
-        "runs_root": path.join(MAXSS_working_directory, "Nightingale-output"),
-        "output_dir": path.join(MAXSS_working_directory, "Nightingale-output", "Spatially_integrated_fluxes"),
+        "runs_root": path.join(MAXSS_working_directory, "Nightingale_output"),
+        "output_dir": path.join(MAXSS_working_directory, "Nightingale_output", "Spatially_integrated_fluxes"),
     },
 }
 
