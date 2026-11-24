@@ -13,7 +13,7 @@ from tqdm import tqdm
 # ==============================================================================
 # CONFIG
 # ==============================================================================
-# Usage: python grid_fluxes.py Deike   (defaults to "Deike" if no argument is given)
+# Usage: python total_flux_across_study_period.py Deike   (defaults to "Deike" if no argument is given)
 PARAMETERIZATION = sys.argv[1] if len(sys.argv) > 1 else "Deike"
 
 TEST_MODE = True  # True = 3 storms on REF_RUN & MAXSS_RUN; False = all storms & all 8 runs
@@ -43,6 +43,7 @@ ALL_RUNS = [
 ]
 # ==============================================================================
 
+
 def calculate_ellipsoidal_areas(lat_values, lon_sample, res=0.25):
     """Compute exact WGS84 ellipsoidal area (m^2) for each latitude band."""
     geod = Geod(ellps="WGS84")
@@ -53,6 +54,7 @@ def calculate_ellipsoidal_areas(lat_values, lon_sample, res=0.25):
         poly_area, _ = geod.polygon_area_perimeter(lons, lats)
         row_areas.append(abs(poly_area))
     return xr.DataArray(row_areas, coords={"latitude": lat_values}, dims="latitude")
+
 
 def build_aligned_master_grid(sample_ds, lat_bounds=(-15.0, 85.0), lon_bounds=(-125.0, 30.0), res=0.25):
     """
@@ -70,6 +72,7 @@ def build_aligned_master_grid(sample_ds, lat_bounds=(-15.0, 85.0), lon_bounds=(-
     master_lat = np.round(np.arange(lat_start, lat_end + res / 2, res), 6)
     master_lon = np.round(np.arange(lon_start, lon_end + res / 2, res), 6)
     return master_lat, master_lon
+
 
 def generate_gridded_component_fluxes(
     MAXSS_working_directory,
@@ -124,13 +127,16 @@ def generate_gridded_component_fluxes(
 
     thresh_attr = f"{salinity_threshold} PSU" if salinity_threshold is not None else "None"
 
-    # Study-period accumulators: cumulative flux (Tg C) and valid storm-hours per grid cell
+    # Study-period accumulators:
+    # - Per-run cumulative flux (Tg C)
+    # - Single shared valid storm-hours array across the study period
     cumulative_flux = {
         run_name: np.zeros((len(master_lat), len(master_lon)), dtype=np.float64)
         for run_name in runs
     }
-    valid_hour_counts = {
-        run_name: np.zeros((len(master_lat), len(master_lon)), dtype=np.int32)
+    study_valid_hour_counts = np.zeros((len(master_lat), len(master_lon)), dtype=np.int32)
+    run_observed_mask = {
+        run_name: np.zeros((len(master_lat), len(master_lon)), dtype=bool)
         for run_name in runs
     }
 
@@ -161,6 +167,10 @@ def generate_gridded_component_fluxes(
         storm_lon = None
         storm_data_vars = {}
         storm_encoding = {}
+
+        # Baseline valid-hour tracking for this storm across runs
+        storm_ref_hours = None
+        storm_ref_run = None
 
         for run_name in runs:
             storm_run_path = path.join(
@@ -245,14 +255,6 @@ def generate_gridded_component_fluxes(
                         "sea_ice_scaling": "linear (1 - sea_ice_proportion)",
                     },
                 )
-                storm_data_vars[f"{run_name}_valid_hours"] = (
-                    ["latitude", "longitude"],
-                    native_hours,
-                    {
-                        "units": "hours",
-                        "long_name": f"Valid storm-hours contributing to {run_name}",
-                    },
-                )
                 storm_data_vars[f"{run_name}_storm_total"] = (
                     [],
                     scalar_storm_total,
@@ -262,7 +264,26 @@ def generate_gridded_component_fluxes(
                     },
                 )
                 storm_encoding[run_name] = {"zlib": True, "complevel": 4, "_FillValue": np.nan}
-                storm_encoding[f"{run_name}_valid_hours"] = {"zlib": True, "complevel": 4}
+
+                # Record valid_hours once per storm and verify consistency across all other runs
+                if storm_ref_hours is None:
+                    storm_ref_hours = native_hours.copy()
+                    storm_ref_run = run_name
+                    storm_data_vars["valid_hours"] = (
+                        ["latitude", "longitude"],
+                        native_hours,
+                        {
+                            "units": "hours",
+                            "long_name": "Valid storm-hours contributing to flux integration",
+                        },
+                    )
+                    storm_encoding["valid_hours"] = {"zlib": True, "complevel": 4}
+                elif not np.array_equal(native_hours, storm_ref_hours):
+                    diff_cells = int(np.sum(native_hours != storm_ref_hours))
+                    print(
+                        f"   -> Note: {storm_name} ({run_name}) differs in valid_hours "
+                        f"from {storm_ref_run} at {diff_cells} grid cells."
+                    )
 
                 # 6. Verify the storm box fits completely inside the study-period master grid
                 if (
@@ -287,10 +308,15 @@ def generate_gridded_component_fluxes(
                     )
                     .fillna(0)
                     .values
+                    .astype(np.int32)
                 )
 
                 cumulative_flux[run_name] += aligned_flux
-                valid_hour_counts[run_name] += aligned_counts.astype(np.int32)
+                run_observed_mask[run_name] |= (aligned_counts > 0)
+
+                # Accumulate shared valid_hours once per storm (from the storm's baseline run)
+                if run_name == storm_ref_run:
+                    study_valid_hour_counts += aligned_counts
 
         # Write individual TC NetCDF file
         if storm_data_vars:
@@ -318,7 +344,7 @@ def generate_gridded_component_fluxes(
 
     for run_name in runs:
         # Mask cells that were never observed by any storm as NaN (land / outside domain)
-        gridded_total = np.where(valid_hour_counts[run_name] > 0, cumulative_flux[run_name], np.nan)
+        gridded_total = np.where(run_observed_mask[run_name], cumulative_flux[run_name], np.nan)
 
         study_data_vars[run_name] = (
             ["latitude", "longitude"],
@@ -331,16 +357,17 @@ def generate_gridded_component_fluxes(
                 "sea_ice_scaling": "linear (1 - sea_ice_proportion)",
             },
         )
-        study_data_vars[f"{run_name}_valid_hours"] = (
-            ["latitude", "longitude"],
-            valid_hour_counts[run_name],
-            {
-                "units": "hours",
-                "long_name": f"Number of valid storm-hours contributing to {run_name}",
-            },
-        )
         study_encoding[run_name] = {"zlib": True, "complevel": 4, "_FillValue": np.nan}
-        study_encoding[f"{run_name}_valid_hours"] = {"zlib": True, "complevel": 4}
+
+    study_data_vars["valid_hours"] = (
+        ["latitude", "longitude"],
+        study_valid_hour_counts,
+        {
+            "units": "hours",
+            "long_name": "Number of valid storm-hours contributing to study-period fluxes",
+        },
+    )
+    study_encoding["valid_hours"] = {"zlib": True, "complevel": 4}
 
     ds_study = xr.Dataset(
         data_vars=study_data_vars,
