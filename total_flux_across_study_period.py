@@ -16,7 +16,7 @@ from tqdm import tqdm
 # Usage: python total_flux_across_study_period.py Deike   (defaults to "Deike" if no argument is given)
 PARAMETERIZATION = sys.argv[1] if len(sys.argv) > 1 else "Deike"
 
-TEST_MODE = True  # True = 3 storms on REF_RUN & MAXSS_RUN; False = all storms & all 8 runs
+TEST_MODE = False  # True = 3 storms on REF_RUN & MAXSS_RUN; False = all storms & all 8 runs
 
 MAXSS_working_directory = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory"
 
