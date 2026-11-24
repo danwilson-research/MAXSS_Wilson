@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
-#Import required packages
+# Import required packages
 import os
 from os import path
 from glob import glob
+import sys
 import numpy as np
 import xarray as xr
 from pyproj import Geod
 from tqdm import tqdm
-import sys
 
 # ==============================================================================
-# USER CONFIGURATION
+# CONFIG
 # ==============================================================================
 # Usage: python grid_fluxes.py Deike   (defaults to "Deike" if no argument is given)
 PARAMETERIZATION = sys.argv[1] if len(sys.argv) > 1 else "Deike"
 
-TEST_MODE = True # True = 3 storms on REF_RUN & MAXSS_RUN; False = all storms & all 8 runs
+TEST_MODE = True  # True = 3 storms on REF_RUN & MAXSS_RUN; False = all storms & all 8 runs
 
 MAXSS_working_directory = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory"
 
@@ -43,7 +43,6 @@ ALL_RUNS = [
 ]
 # ==============================================================================
 
-
 def calculate_ellipsoidal_areas(lat_values, lon_sample, res=0.25):
     """Compute exact WGS84 ellipsoidal area (m^2) for each latitude band."""
     geod = Geod(ellps="WGS84")
@@ -54,7 +53,6 @@ def calculate_ellipsoidal_areas(lat_values, lon_sample, res=0.25):
         poly_area, _ = geod.polygon_area_perimeter(lons, lats)
         row_areas.append(abs(poly_area))
     return xr.DataArray(row_areas, coords={"latitude": lat_values}, dims="latitude")
-
 
 def build_aligned_master_grid(sample_ds, lat_bounds=(-15.0, 85.0), lon_bounds=(-125.0, 30.0), res=0.25):
     """
@@ -73,11 +71,11 @@ def build_aligned_master_grid(sample_ds, lat_bounds=(-15.0, 85.0), lon_bounds=(-
     master_lon = np.round(np.arange(lon_start, lon_end + res / 2, res), 6)
     return master_lat, master_lon
 
-
 def generate_gridded_component_fluxes(
     MAXSS_working_directory,
     fluxengine_runs_root,
-    output_nc_path,
+    study_total_nc_path,
+    per_storm_output_dir,
     runs,
     parameterization_label="Deike",
     MAXSS_regions=("north-atlantic",),
@@ -121,7 +119,12 @@ def generate_gridded_component_fluxes(
     if master_lat is None:
         raise RuntimeError("Could not find any FluxEngine NetCDF files to initialize master grid.")
 
-    # Accumulators: cumulative flux (Tg C) and number of valid storm-hours per grid cell
+    os.makedirs(per_storm_output_dir, exist_ok=True)
+    os.makedirs(path.dirname(study_total_nc_path), exist_ok=True)
+
+    thresh_attr = f"{salinity_threshold} PSU" if salinity_threshold is not None else "None"
+
+    # Study-period accumulators: cumulative flux (Tg C) and valid storm-hours per grid cell
     cumulative_flux = {
         run_name: np.zeros((len(master_lat), len(master_lon)), dtype=np.float64)
         for run_name in runs
@@ -132,7 +135,7 @@ def generate_gridded_component_fluxes(
     }
 
     # Main loop over storms
-    for region, year_name, storm_name in tqdm(storm_entries, desc=f"Accumulating {parameterization_label} Grids"):
+    for region, year_name, storm_name in tqdm(storm_entries, desc=f"Processing {parameterization_label} TCs"):
         land_fraction_path = path.join(
             MAXSS_working_directory,
             "maxss/storm-atlas/tropical/ibtracs",
@@ -154,6 +157,10 @@ def generate_gridded_component_fluxes(
         water_proportion = 1.0 - land_fraction
 
         grid_areas = None
+        storm_lat = None
+        storm_lon = None
+        storm_data_vars = {}
+        storm_encoding = {}
 
         for run_name in runs:
             storm_run_path = path.join(
@@ -171,7 +178,9 @@ def generate_gridded_component_fluxes(
                 continue
 
             with xr.open_mfdataset(fluxengine_files, combine="by_coords", chunks=None, parallel=False) as ds:
-                if grid_areas is None:
+                if storm_lat is None:
+                    storm_lat = np.round(ds.latitude.values, 6)
+                    storm_lon = np.round(ds.longitude.values, 6)
                     grid_areas = calculate_ellipsoidal_areas(ds.latitude.values, float(ds.longitude.values[0]), res=0.25)
 
                 # 1. Align land and sea-ice masks onto the storm's FluxEngine grid
@@ -206,7 +215,56 @@ def generate_gridded_component_fluxes(
                 storm_total_map = mass_map_tg.sum(dim="time", skipna=True)
                 storm_valid_hours = np.isfinite(mass_map_tg).sum(dim="time")
 
-                # 5. Verify the storm box fits completely inside the master grid
+                # 5. Prepare per-TC gridded variables on the storm's native bounding box
+                native_flux = (
+                    storm_total_map.reindex(
+                        latitude=storm_lat, longitude=storm_lon, method="nearest", tolerance=1e-4, fill_value=0.0
+                    )
+                    .fillna(0.0)
+                    .values
+                )
+                native_hours = (
+                    storm_valid_hours.reindex(
+                        latitude=storm_lat, longitude=storm_lon, method="nearest", tolerance=1e-4, fill_value=0
+                    )
+                    .fillna(0)
+                    .values
+                    .astype(np.int32)
+                )
+                native_flux_masked = np.where(native_hours > 0, native_flux, np.nan)
+                scalar_storm_total = float(np.sum(native_flux))
+
+                storm_data_vars[run_name] = (
+                    ["latitude", "longitude"],
+                    native_flux_masked,
+                    {
+                        "units": "Tg C",
+                        "long_name": f"Storm-integrated air-sea CO2 flux ({run_name}, {parameterization_label})",
+                        "parameterization": parameterization_label,
+                        "salinity_threshold": thresh_attr,
+                        "sea_ice_scaling": "linear (1 - sea_ice_proportion)",
+                    },
+                )
+                storm_data_vars[f"{run_name}_valid_hours"] = (
+                    ["latitude", "longitude"],
+                    native_hours,
+                    {
+                        "units": "hours",
+                        "long_name": f"Valid storm-hours contributing to {run_name}",
+                    },
+                )
+                storm_data_vars[f"{run_name}_storm_total"] = (
+                    [],
+                    scalar_storm_total,
+                    {
+                        "units": "Tg C",
+                        "long_name": f"Basin-integrated storm total CO2 flux ({run_name}, {parameterization_label})",
+                    },
+                )
+                storm_encoding[run_name] = {"zlib": True, "complevel": 4, "_FillValue": np.nan}
+                storm_encoding[f"{run_name}_valid_hours"] = {"zlib": True, "complevel": 4}
+
+                # 6. Verify the storm box fits completely inside the study-period master grid
                 if (
                     float(storm_total_map.latitude.min()) < master_lat[0]
                     or float(storm_total_map.latitude.max()) > master_lat[-1]
@@ -215,7 +273,7 @@ def generate_gridded_component_fluxes(
                 ):
                     print(f"   -> WARNING: {storm_name} ({run_name}) extends outside master grid bounds!")
 
-                # 6. Snap onto stationary master grid (exact coordinate match via tolerance)
+                # 7. Snap onto stationary master grid and accumulate study-period totals
                 aligned_flux = (
                     storm_total_map.reindex(
                         latitude=master_lat, longitude=master_lon, method="nearest", tolerance=1e-4, fill_value=0.0
@@ -234,16 +292,35 @@ def generate_gridded_component_fluxes(
                 cumulative_flux[run_name] += aligned_flux
                 valid_hour_counts[run_name] += aligned_counts.astype(np.int32)
 
-    # Build output NetCDF dataset
-    data_vars = {}
-    encoding = {}
-    thresh_attr = f"{salinity_threshold} PSU" if salinity_threshold is not None else "None"
+        # Write individual TC NetCDF file
+        if storm_data_vars:
+            ds_storm = xr.Dataset(
+                data_vars=storm_data_vars,
+                coords={
+                    "latitude": (["latitude"], storm_lat, {"units": "degrees_north", "standard_name": "latitude"}),
+                    "longitude": (["longitude"], storm_lon, {"units": "degrees_east", "standard_name": "longitude"}),
+                },
+                attrs={
+                    "title": f"Gridded TC CO2 Flux Components (0.25 deg) - {storm_name}",
+                    "storm_id": storm_name,
+                    "storm_year": int(year_name),
+                    "region": region,
+                    "parameterization": parameterization_label,
+                    "salinity_threshold": thresh_attr,
+                },
+            )
+            storm_nc_path = path.join(per_storm_output_dir, f"{storm_name}_gridded_fluxes_{parameterization_label}.nc")
+            ds_storm.to_netcdf(storm_nc_path, encoding=storm_encoding)
+
+    # Build study-period cumulative NetCDF dataset
+    study_data_vars = {}
+    study_encoding = {}
 
     for run_name in runs:
         # Mask cells that were never observed by any storm as NaN (land / outside domain)
         gridded_total = np.where(valid_hour_counts[run_name] > 0, cumulative_flux[run_name], np.nan)
 
-        data_vars[run_name] = (
+        study_data_vars[run_name] = (
             ["latitude", "longitude"],
             gridded_total,
             {
@@ -254,7 +331,7 @@ def generate_gridded_component_fluxes(
                 "sea_ice_scaling": "linear (1 - sea_ice_proportion)",
             },
         )
-        data_vars[f"{run_name}_valid_hours"] = (
+        study_data_vars[f"{run_name}_valid_hours"] = (
             ["latitude", "longitude"],
             valid_hour_counts[run_name],
             {
@@ -262,32 +339,33 @@ def generate_gridded_component_fluxes(
                 "long_name": f"Number of valid storm-hours contributing to {run_name}",
             },
         )
-        encoding[run_name] = {"zlib": True, "complevel": 4, "_FillValue": np.nan}
-        encoding[f"{run_name}_valid_hours"] = {"zlib": True, "complevel": 4}
+        study_encoding[run_name] = {"zlib": True, "complevel": 4, "_FillValue": np.nan}
+        study_encoding[f"{run_name}_valid_hours"] = {"zlib": True, "complevel": 4}
 
-    ds_out = xr.Dataset(
-        data_vars=data_vars,
+    ds_study = xr.Dataset(
+        data_vars=study_data_vars,
         coords={
             "latitude": (["latitude"], master_lat, {"units": "degrees_north", "standard_name": "latitude"}),
             "longitude": (["longitude"], master_lon, {"units": "degrees_east", "standard_name": "longitude"}),
         },
         attrs={
-            "title": f"Gridded Cumulative Tropical Cyclone CO2 Flux Components (0.25 deg) - {parameterization_label}",
+            "title": f"Study-Period Cumulative Tropical Cyclone CO2 Flux Components (0.25 deg) - {parameterization_label}",
             "parameterization": parameterization_label,
             "storms_processed": len(storm_entries),
             "salinity_threshold": thresh_attr,
         },
     )
 
-    os.makedirs(path.dirname(output_nc_path), exist_ok=True)
-    ds_out.to_netcdf(output_nc_path, encoding=encoding)
+    ds_study.to_netcdf(study_total_nc_path, encoding=study_encoding)
 
-    print(f"\n{'='*50}")
-    print(f"SUCCESS [{parameterization_label}]: Gridded NetCDF saved to:\n  {output_nc_path}")
+    print(f"\n{'='*60}")
+    print(f"SUCCESS [{parameterization_label}]:")
+    print(f"  1. Per-TC NetCDFs ({len(storm_entries)} files) saved to:\n     {per_storm_output_dir}")
+    print(f"  2. Study-period total NetCDF saved to:\n     {study_total_nc_path}")
     for run_name in runs:
-        total_basin_tg = float(np.nansum(ds_out[run_name].values))
-        print(f"  - {run_name}: {total_basin_tg:.6f} Tg C (basin sum)")
-    print(f"{'='*50}")
+        total_basin_tg = float(np.nansum(ds_study[run_name].values))
+        print(f"     - {run_name}: {total_basin_tg:.6f} Tg C (basin sum)")
+    print(f"{'='*60}")
 
 
 if __name__ == "__main__":
@@ -297,16 +375,19 @@ if __name__ == "__main__":
     if TEST_MODE:
         runs_to_run = ["REF_RUN", "MAXSS_RUN"]
         max_storms = 3
-        output_file = path.join(cfg["output_dir"], f"gridded_component_total_flux_{PARAMETERIZATION}_TEST_3storms.nc")
+        study_total_file = path.join(cfg["output_dir"], f"gridded_component_total_flux_{PARAMETERIZATION}_TEST_3storms.nc")
+        per_storm_dir = path.join(cfg["output_dir"], f"per_storm_gridded_fluxes_{PARAMETERIZATION}_TEST_3storms")
     else:
         runs_to_run = ALL_RUNS
         max_storms = None
-        output_file = path.join(cfg["output_dir"], f"gridded_component_total_flux_{PARAMETERIZATION}_all_TCs.nc")
+        study_total_file = path.join(cfg["output_dir"], f"gridded_component_total_flux_{PARAMETERIZATION}_all_TCs.nc")
+        per_storm_dir = path.join(cfg["output_dir"], f"per_storm_gridded_fluxes_{PARAMETERIZATION}")
 
     generate_gridded_component_fluxes(
         MAXSS_working_directory=MAXSS_working_directory,
         fluxengine_runs_root=cfg["runs_root"],
-        output_nc_path=output_file,
+        study_total_nc_path=study_total_file,
+        per_storm_output_dir=per_storm_dir,
         runs=runs_to_run,
         parameterization_label=PARAMETERIZATION,
         MAXSS_regions=("north-atlantic",),
