@@ -168,9 +168,10 @@ def generate_gridded_component_fluxes(
         storm_data_vars = {}
         storm_encoding = {}
 
-        # Baseline valid-hour tracking for this storm across runs
-        storm_ref_hours = None
-        storm_ref_run = None
+        # Track 3D hourly validity masks and 2D hour counts across runs for this storm
+        storm_valid_3d = {}
+        storm_run_hours = {}
+        storm_coords_template = None
 
         for run_name in runs:
             storm_run_path = path.join(
@@ -223,7 +224,14 @@ def generate_gridded_component_fluxes(
                 # 4. Integrate hourly flux over the storm lifetime at each 0.25-deg pixel (Tg C)
                 mass_map_tg = (clean_OF * grid_areas * (1.0 / 24.0) * current_water_map * ice_free_proportion) / 1e12
                 storm_total_map = mass_map_tg.sum(dim="time", skipna=True)
-                storm_valid_hours = np.isfinite(mass_map_tg).sum(dim="time")
+                valid_3d = np.isfinite(mass_map_tg).load()
+                storm_valid_hours = valid_3d.sum(dim="time")
+
+                if storm_coords_template is None:
+                    storm_coords_template = storm_valid_hours
+
+                if run_name in ("REF_RUN", "MAXSS_RUN"):
+                    storm_valid_3d[run_name] = valid_3d
 
                 # 5. Prepare per-TC gridded variables on the storm's native bounding box
                 native_flux = (
@@ -241,6 +249,7 @@ def generate_gridded_component_fluxes(
                     .values
                     .astype(np.int32)
                 )
+                storm_run_hours[run_name] = native_hours
                 native_flux_masked = np.where(native_hours > 0, native_flux, np.nan)
                 scalar_storm_total = float(np.sum(native_flux))
 
@@ -264,26 +273,6 @@ def generate_gridded_component_fluxes(
                     },
                 )
                 storm_encoding[run_name] = {"zlib": True, "complevel": 4, "_FillValue": np.nan}
-
-                # Record valid_hours once per storm and verify consistency across all other runs
-                if storm_ref_hours is None:
-                    storm_ref_hours = native_hours.copy()
-                    storm_ref_run = run_name
-                    storm_data_vars["valid_hours"] = (
-                        ["latitude", "longitude"],
-                        native_hours,
-                        {
-                            "units": "hours",
-                            "long_name": "Valid storm-hours contributing to flux integration",
-                        },
-                    )
-                    storm_encoding["valid_hours"] = {"zlib": True, "complevel": 4}
-                elif not np.array_equal(native_hours, storm_ref_hours):
-                    diff_cells = int(np.sum(native_hours != storm_ref_hours))
-                    print(
-                        f"   -> Note: {storm_name} ({run_name}) differs in valid_hours "
-                        f"from {storm_ref_run} at {diff_cells} grid cells."
-                    )
 
                 # 6. Verify the storm box fits completely inside the study-period master grid
                 if (
@@ -314,9 +303,50 @@ def generate_gridded_component_fluxes(
                 cumulative_flux[run_name] += aligned_flux
                 run_observed_mask[run_name] |= (aligned_counts > 0)
 
-                # Accumulate shared valid_hours once per storm (from the storm's baseline run)
-                if run_name == storm_ref_run:
-                    study_valid_hour_counts += aligned_counts
+        # Compute shared valid_hours where BOTH REF_RUN and MAXSS_RUN are valid at each hour
+        if "REF_RUN" in storm_valid_3d and "MAXSS_RUN" in storm_valid_3d:
+            joint_da = (storm_valid_3d["REF_RUN"] & storm_valid_3d["MAXSS_RUN"]).sum(dim="time")
+            if not np.array_equal(storm_run_hours["REF_RUN"], storm_run_hours["MAXSS_RUN"]):
+                diff_cells = int(np.sum(storm_run_hours["REF_RUN"] != storm_run_hours["MAXSS_RUN"]))
+                print(
+                    f"   -> Note: {storm_name} differs in valid_hours between REF_RUN and MAXSS_RUN "
+                    f"at {diff_cells} grid cells (using joint intersection)."
+                )
+        elif storm_valid_3d:
+            only_key = next(iter(storm_valid_3d))
+            joint_da = storm_valid_3d[only_key].sum(dim="time")
+        else:
+            joint_da = None
+
+        if joint_da is not None:
+            native_joint_hours = (
+                joint_da.reindex(
+                    latitude=storm_lat, longitude=storm_lon, method="nearest", tolerance=1e-4, fill_value=0
+                )
+                .fillna(0)
+                .values
+                .astype(np.int32)
+            )
+            storm_data_vars["valid_hours"] = (
+                ["latitude", "longitude"],
+                native_joint_hours,
+                {
+                    "units": "hours",
+                    "long_name": "Valid storm-hours where both MAXSS_RUN and REF_RUN are finite",
+                },
+            )
+            storm_encoding["valid_hours"] = {"zlib": True, "complevel": 4}
+
+            aligned_joint_counts = (
+                joint_da.reindex(
+                    latitude=master_lat, longitude=master_lon, method="nearest", tolerance=1e-4, fill_value=0
+                )
+                .fillna(0)
+                .values
+                .astype(np.int32)
+            )
+            study_valid_hour_counts += aligned_joint_counts
+
 
         # Write individual TC NetCDF file
         if storm_data_vars:
