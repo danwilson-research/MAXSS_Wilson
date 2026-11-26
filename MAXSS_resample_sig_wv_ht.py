@@ -1432,115 +1432,99 @@ def MAXSS_resample_main(
 
                 # print("Pressure pre-storm reference calculated and saved for Storm = " + storm)
 
-                ### Additional code to extract significant wave height from ERA5 data ###
-                
+               
                 # ==============================================================================
-                # --- MAXSS ERA5 Significant Wave Height (SWH) — Multi-Month Fix ---
+                # --- MAXSS ERA5 Significant Wave Height (SWH) — Meridian-Agnostic Fix ---
                 # ==============================================================================
                 print(f"--- Processing SWH for Storm: {storm} ---")
 
-                # 1. Establish spatial crop bounds using a sample SWH NetCDF file
+                # 1. Establish spatial grid & coordinate convention from a sample SWH NetCDF file
                 sample_files = glob(
                     path.join(swh_directory, f"*{wind_dates[0].year}*.nc")
                 )
                 if not sample_files:
-                  sample_files = glob(path.join(swh_directory, "*.nc"))
+                    sample_files = glob(path.join(swh_directory, "*.nc"))
 
                 if not sample_files:
-                  print(
-                      f"\n!!! FATAL ERROR: No SWH files found in"
-                      f" {swh_directory} !!!"
-                  )
-                  sys.exit(1)
+                    print(
+                        f"\n!!! FATAL ERROR: No SWH files found in"
+                        f" {swh_directory} !!!"
+                    )
+                    sys.exit(1)
 
-                swh_sample_nc = nc.Dataset(sample_files[0])
-                swh_lat_full = (
-                    swh_sample_nc.variables["lat"][:]
-                    if "lat" in swh_sample_nc.variables
-                    else swh_sample_nc.variables["latitude"][:]
-                )
-                swh_lon_full = (
-                    swh_sample_nc.variables["lon"][:]
-                    if "lon" in swh_sample_nc.variables
-                    else swh_sample_nc.variables["longitude"][:]
-                )
+                with nc.Dataset(sample_files[0]) as swh_sample_nc:
+                    swh_lat_full = np.asarray(
+                        swh_sample_nc.variables["lat"][:]
+                        if "lat" in swh_sample_nc.variables
+                        else swh_sample_nc.variables["latitude"][:]
+                    )
+                    swh_lon_full = np.asarray(
+                        swh_sample_nc.variables["lon"][:]
+                        if "lon" in swh_sample_nc.variables
+                        else swh_sample_nc.variables["longitude"][:]
+                    )
+                    swh_varname = (
+                        "swh"
+                        if "swh" in swh_sample_nc.variables
+                        else "__eo_swh"
+                    )
+                    swh_fill_value = getattr(
+                        swh_sample_nc.variables[swh_varname], "_FillValue", np.nan
+                    )
 
-                swh_varname = (
-                    "swh"
-                    if "swh" in swh_sample_nc.variables
-                    else "__eo_swh"
-                )
-                swh_fill_value = getattr(
-                    swh_sample_nc.variables[swh_varname], "_FillValue", np.nan
-                )
-                swh_sample_nc.close()
+                # Normalize source longitudes to [-180, 180) and sort monotonically
+                swh_lon_180 = ((swh_lon_full + 180.0) % 360.0) - 180.0
+                lon_sort_idx = np.argsort(swh_lon_180)
+                swh_lon_sorted = swh_lon_180[lon_sort_idx]
 
-                # Convert wind longitudes to 0-360 if swh_lon_full is in 0-360 convention
-                swh_is_360 = np.min(swh_lon_full) >= 0 and np.max(swh_lon_full) > 180
-                
-                if swh_is_360:
-                    wind_lon_for_crop = (wind_lon + 360) % 360
+                # Check if SWH grid spans the globe (>350 deg) so we can wrap ±180° seamlessly
+                is_global_swh = (np.max(swh_lon_sorted) - np.min(swh_lon_sorted)) > 350.0
+                if is_global_swh:
+                    # Pad 1 periodic column on each side: [-180.25, -180.0, ..., 179.75, +180.0]
+                    swh_lon_wrapped = np.concatenate((
+                        [swh_lon_sorted[-1] - 360.0],
+                        swh_lon_sorted,
+                        [swh_lon_sorted[0] + 360.0],
+                    ))
                 else:
-                    wind_lon_for_crop = wind_lon
+                    swh_lon_wrapped = swh_lon_sorted
 
-                # Convert wind longitudes to 0-360 if swh_lon_full is in 0-360 convention
-                swh_is_360 = np.min(swh_lon_full) >= 0 and np.max(swh_lon_full) > 180
-                
-                if swh_is_360:
-                    wind_lon_for_crop = (wind_lon + 360) % 360
-                else:
-                    wind_lon_for_crop = wind_lon
+                # Normalize target wind longitudes to [-180, 180] (preserving +180.0 as +180.0)
+                target_lon_180 = np.where(
+                    np.isclose(wind_lon, 180.0),
+                    180.0,
+                    ((wind_lon + 180.0) % 360.0) - 180.0,
+                )
 
-                # Crop bounding box with +0.5 degree buffer
+                # Crop bounding box in sorted/wrapped [-180.25, +180.0] space with +0.5 deg buffer
                 lat_indices = np.where(
-                    (swh_lat_full >= min(wind_lat) - 0.5)
-                    & (swh_lat_full <= max(wind_lat) + 0.5)
+                    (swh_lat_full >= np.min(wind_lat) - 0.5)
+                    & (swh_lat_full <= np.max(wind_lat) + 0.5)
                 )[0]
-                
-                # Check if storm crosses the 0/360 seam (min > max in 0-360 space)
-                if swh_is_360 and (min(wind_lon_for_crop) > max(wind_lon_for_crop)):
-                    lon_indices = np.where(
-                        (swh_lon_full >= min(wind_lon_for_crop) - 0.5)
-                        | (swh_lon_full <= max(wind_lon_for_crop) + 0.5)
-                    )[0]
-                else:
-                    lon_indices = np.where(
-                        (swh_lon_full >= min(wind_lon_for_crop) - 0.5)
-                        & (swh_lon_full <= max(wind_lon_for_crop) + 0.5)
-                    )[0]
+                lon_indices = np.where(
+                    (swh_lon_wrapped >= np.min(target_lon_180) - 0.5)
+                    & (swh_lon_wrapped <= np.max(target_lon_180) + 0.5)
+                )[0]
 
                 if len(lat_indices) == 0 or len(lon_indices) == 0:
-                  print(
-                      f"\n!!! FATAL ERROR: Storm {storm} spatial extent is"
-                      " outside the SWH Atlantic domain !!!"
-                  )
-                  sys.exit(1)
+                    print(
+                        f"\n!!! FATAL ERROR: Storm {storm} spatial extent is"
+                        " outside the SWH domain !!!"
+                    )
+                    sys.exit(1)
 
-                lat_start, lat_end = min(lat_indices), max(lat_indices) + 1
-                lon_start, lon_end = min(lon_indices), max(lon_indices) + 1
+                lat_start, lat_end = int(np.min(lat_indices)), int(np.max(lat_indices)) + 1
+                lon_start, lon_end = int(np.min(lon_indices)), int(np.max(lon_indices)) + 1
 
                 swh_lat_sub = swh_lat_full[lat_start:lat_end]
-                swh_lon_sub = swh_lon_full[lon_start:lon_end].copy()
-
-                # Fix Monotonicity: Unwrap longitudes crossing the 0/360 seam (e.g., [358, 359, 0, 1] -> [358, 359, 360, 361])
-                if np.any(np.diff(swh_lon_sub) < 0):
-                    swh_lon_sub[swh_lon_sub < swh_lon_sub[0]] += 360
+                swh_lon_sub = swh_lon_wrapped[lon_start:lon_end]
 
                 flip_lat = swh_lat_sub[0] > swh_lat_sub[-1]
-                flip_lon = swh_lon_sub[0] > swh_lon_sub[-1]
-
                 if flip_lat:
-                  swh_lat_sub = swh_lat_sub[::-1]
-                if flip_lon:
-                  swh_lon_sub = swh_lon_sub[::-1]
-
-                # Ensure target longitudes match the unwrapped coordinate scale
-                target_lon_calc = wind_lon_for_crop.copy()
-                if swh_is_360 and np.any(np.diff(target_lon_calc) < 0):
-                    target_lon_calc[target_lon_calc < target_lon_calc[0]] += 360
+                    swh_lat_sub = swh_lat_sub[::-1]
 
                 target_lat_2d, target_lon_2d = np.meshgrid(
-                    wind_lat, target_lon_calc, indexing="ij"
+                    wind_lat, target_lon_180, indexing="ij"
                 )
                 target_points = np.column_stack(
                     (target_lat_2d.ravel(), target_lon_2d.ravel())
@@ -1551,9 +1535,7 @@ def MAXSS_resample_main(
                     (wind_time_dimension, wind_lat_dimension, wind_lon_dimension),
                     dtype=np.float32,
                 )
-                opened_swh_files = (
-                    {}
-                )  # Cache for opened monthly files: (YYYY, MM) -> dict
+                opened_swh_files = {}  # Cache for opened monthly files: (YYYY, MM) -> dict
 
                 print(
                     f"Interpolating SWH across {wind_time_dimension} time"
@@ -1561,77 +1543,80 @@ def MAXSS_resample_main(
                 )
 
                 for wind_step in range(wind_time_dimension):
-                  current_date = wind_dates[wind_step]
-                  month_key = (current_date.year, current_date.month)
+                    current_date = wind_dates[wind_step]
+                    month_key = (current_date.year, current_date.month)
 
-                  # Dynamic month file switching
-                  if month_key not in opened_swh_files:
-                    y_str = f"{current_date.year}"
-                    m_str = f"{current_date.month:02d}"
-                    m_files = glob(
-                        path.join(swh_directory, f"*{y_str}*{m_str}*.nc")
+                    # Dynamic month file switching
+                    if month_key not in opened_swh_files:
+                        y_str = f"{current_date.year}"
+                        m_str = f"{current_date.month:02d}"
+                        m_files = glob(
+                            path.join(swh_directory, f"*{y_str}*{m_str}*.nc")
+                        )
+
+                        if not m_files:
+                            print(
+                                f"!!! WARNING: Missing SWH file for {y_str}-{m_str}."
+                                " Filling step with NaNs. !!!"
+                            )
+                            swh_on_wind_grid[wind_step, :, :] = np.nan
+                            continue
+
+                        ds = nc.Dataset(m_files[0])
+                        t_var = "time" if "time" in ds.variables else "valid_time"
+                        m_time = ds.variables[t_var][:]
+                        m_units = ds.variables[t_var].units
+                        m_dates = num2date(m_time, m_units)
+
+                        opened_swh_files[month_key] = {
+                            "dataset": ds,
+                            "dates": m_dates,
+                            "varname": (
+                                "swh" if "swh" in ds.variables else "__eo_swh"
+                            ),
+                        }
+
+                    active_info = opened_swh_files[month_key]
+                    active_nc = active_info["dataset"]
+                    active_dates = active_info["dates"]
+                    active_varname = active_info["varname"]
+
+                    # Find time index inside active month
+                    idx = np.argmin(np.absolute(active_dates - current_date))
+
+                    # Read latitude band, reorder longitudes to [-180, 180), and wrap edges if global
+                    raw_lat_band = active_nc.variables[active_varname][
+                        idx, lat_start:lat_end, :
+                    ]
+                    band_2d = np.ma.filled(raw_lat_band, fill_value=np.nan)[:, lon_sort_idx]
+
+                    if is_global_swh:
+                        band_2d = np.pad(band_2d, ((0, 0), (1, 1)), mode="wrap")
+
+                    slice_2d = band_2d[:, lon_start:lon_end]
+
+                    if flip_lat:
+                        slice_2d = slice_2d[::-1, :]
+
+                    # Bilinear Interpolation
+                    interp_func = RegularGridInterpolator(
+                        (swh_lat_sub, swh_lon_sub),
+                        slice_2d,
+                        method="linear",
+                        bounds_error=False,
+                        fill_value=np.nan,
                     )
 
-                    if not m_files:
-                      print(
-                          f"!!! WARNING: Missing SWH file for {y_str}-{m_str}."
-                          " Filling step with NaNs. !!!"
-                      )
-                      swh_on_wind_grid[wind_step, :, :] = np.nan
-                      continue
-
-                    ds = nc.Dataset(m_files[0])
-                    t_var = "time" if "time" in ds.variables else "valid_time"
-                    m_time = ds.variables[t_var][:]
-                    m_units = ds.variables[t_var].units
-                    m_dates = num2date(m_time, m_units)
-
-                    opened_swh_files[month_key] = {
-                        "dataset": ds,
-                        "dates": m_dates,
-                        "varname": (
-                            "swh" if "swh" in ds.variables else "__eo_swh"
-                        ),
-                    }
-
-                  active_info = opened_swh_files[month_key]
-                  active_nc = active_info["dataset"]
-                  active_dates = active_info["dates"]
-                  active_varname = active_info["varname"]
-
-                  # Find time index inside active month
-                  idx = np.argmin(np.absolute(active_dates - current_date))
-
-                  # Stream 2D spatial slice
-                  raw_slice = active_nc.variables[active_varname][
-                      idx, lat_start:lat_end, lon_start:lon_end
-                  ]
-                  slice_2d = np.ma.filled(raw_slice, fill_value=np.nan)
-
-                  if flip_lat:
-                    slice_2d = slice_2d[::-1, :]
-                  if flip_lon:
-                    slice_2d = slice_2d[:, ::-1]
-
-                  # Bilinear Interpolation
-                  interp_func = RegularGridInterpolator(
-                      (swh_lat_sub, swh_lon_sub),
-                      slice_2d,
-                      method="linear",
-                      bounds_error=False,
-                      fill_value=np.nan,
-                  )
-
-                  interpolated_flat = interp_func(target_points)
-                  swh_on_wind_grid[wind_step, :, :] = (
-                      interpolated_flat.reshape(
-                          wind_lat_dimension, wind_lon_dimension
-                      )
-                  )
+                    interpolated_flat = interp_func(target_points)
+                    swh_on_wind_grid[wind_step, :, :] = (
+                        interpolated_flat.reshape(
+                            wind_lat_dimension, wind_lon_dimension
+                        )
+                    )
 
                 # Close cached SWH datasets
                 for info in opened_swh_files.values():
-                  info["dataset"].close()
+                    info["dataset"].close()
 
                 # Apply 3D Analysis Period Mask (-15 to +40 days)
                 swh_on_wind_grid[analysis_period_mask_3d == 0] = np.nan
@@ -1695,8 +1680,8 @@ def MAXSS_resample_main(
                 pre_storm_swh[pre_storm_mask_3d == 0] = np.nan
 
                 with warnings.catch_warnings():
-                  warnings.simplefilter("ignore", category=RuntimeWarning)
-                  swh_prestormref_2d = np.nanmedian(pre_storm_swh, axis=0)
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    swh_prestormref_2d = np.nanmedian(pre_storm_swh, axis=0)
 
                 swh_on_wind_grid_prestormref = np.tile(
                     swh_prestormref_2d, (wind_time_dimension, 1, 1)
@@ -1770,12 +1755,13 @@ def MAXSS_resample_main(
                 ]
 
                 for var_name in vars_to_delete:
-                  if var_name in locals():
-                    del locals()[var_name]
+                    if var_name in locals():
+                        del locals()[var_name]
 
                 gc.collect()
                 print(
-                    "SWH pre-storm reference calculated and saved for Storm = " + storm)
+                    "SWH pre-storm reference calculated and saved for Storm = " + storm
+                )
                 
                 
                 ## MAXSS Land fraction & Sea Ice fraction ##
