@@ -40,8 +40,8 @@ print("Successfully loaded MAXSS_resample_sig_wv_ht!")
 MAXSS_working_directory = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/"
 downloadedRoot = "/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/Ford_et_al_GBC_fco2/flux"
 configfiletemplate="/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_Wilson/MAXSS_configuration_file_template_DEIKE.conf"
-output_base = '/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/output/Spatially_integrated_fluxes'
-netcdf_output_root = path.join(MAXSS_working_directory, "output/Spatially_integrated_fluxes/maxss/storm-atlas/tropical/ibtracs")
+output_base = '/nobackup/beegfs/workspace/dw557/MAXSS_project/MAXSS_working_directory/Deike_output/Spatially_integrated_fluxes'
+netcdf_output_root = path.join(MAXSS_working_directory, "Deike_output/Spatially_integrated_fluxes/maxss/storm-atlas/tropical/ibtracs")
 runs = ["MAXSS_RUN", "REF_RUN", "WIND_RUN", "SST_NO_GRADIENTS_RUN",
         "SST_WITH_GRADIENTS_RUN", "SSS_RUN", "V_GAS_RUN", "PRESSURE_RUN"]
 MAXSS_regions = ["north-atlantic"]
