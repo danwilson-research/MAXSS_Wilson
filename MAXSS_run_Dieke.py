@@ -48,7 +48,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
     #DJF 09/05/2026: Added the configfiletemplate as a function input so it can be modified by the main function
 
     # if it doesn't exist make directory for config files
-    config_folder_path = path.join("output", "configs", run_name, "maxss","storm-atlas","tropical","ibtracs", region, year)
+    config_folder_path = path.join("Deike_output", "configs", run_name, "maxss","storm-atlas","tropical","ibtracs", region, year)
     
     if not os.path.exists(config_folder_path):
         os.makedirs(config_folder_path, exist_ok=True)
@@ -174,7 +174,7 @@ def make_configuration_file(storm_dir_relative,timestepsinfile,region,year,storm
         filedata = filedata.replace('rain_temporalChunking = numberoftimesteps','rain_temporalChunking ='+str(timestepsinfile))
 
     #output directory
-    filedata = filedata.replace('output_dir = output/', 'output_dir = ' + "output/{3}/maxss/storm-atlas/tropical/ibtracs/{0}/{1}/{2}".format(region, year, storm, run_name))
+    filedata = filedata.replace('output_dir = output/', 'output_dir = ' + "Deike_output/{3}/maxss/storm-atlas/tropical/ibtracs/{0}/{1}/{2}".format(region, year, storm, run_name))
     
     #output file format
     filedata = filedata.replace('output_file = MAXSS_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc', 'output_file = MAXSS_'+storm+'_DOY_<DDD>_DATE_<YYYY>_<MM>_<DD>.nc')
